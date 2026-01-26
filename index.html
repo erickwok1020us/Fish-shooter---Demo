@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<!-- Fish Shooter 3D v2.0.0 - 4-Player Multiplayer Edition - Dec 14, 2025 -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Shooter 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Issue: Removed cursor: crosshair to prevent duplicate crosshair in 3rd person mode */
+            /* Custom #crosshair element handles all crosshair display */
+        }
+        
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            /* FIX: Hide game container by default to prevent flash on page load */
+            display: none;
+        }
+        
+        /* FPS mode: Hide mouse cursor (only crosshair visible) */
+        #game-container.fps-hide-cursor {
+            cursor: none;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Balance Display - Top Left */
+        #balance-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, rgba(0, 200, 100, 0.3), rgba(0, 150, 80, 0.2));
+            border: 2px solid #00c864;
+            border-radius: 15px;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 15px rgba(0, 200, 100, 0.3);
+        }
+        
+        #balance-display .balance-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #00c864, #00a050);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+        }
+        
+        #balance-display .balance-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #00ff7f;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        #balance-display .balance-label {
+            font-size: 12px;
+            color: #88ffaa;
+            margin-left: -8px;
+        }
+        
+        /* Settings Container - Top Right (Issue #19: Unified container) */
+        #settings-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(180deg, rgba(40, 40, 50, 0.95), rgba(20, 20, 30, 0.95));
+            padding: 8px 16px;
+            border-radius: 25px;
+            border: 2px solid rgba(100, 100, 120, 0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #settings-container:hover {
+            background: linear-gradient(180deg, rgba(50, 50, 60, 0.95), rgba(30, 30, 40, 0.95));
+            border-color: rgba(150, 150, 170, 0.6);
+            transform: scale(1.05);
+        }
+        
+        #settings-container .settings-icon {
+            font-size: 22px;
+            color: #aabbcc;
+            transition: all 0.3s ease;
+        }
+        
+        #settings-container:hover .settings-icon {
+            color: #ddeeff;
+            transform: rotate(45deg);
+        }
+        
+        #settings-container .settings-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #aabbcc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        #settings-container .settings-shortcut {
+            font-size: 11px;
+            color: #778899;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 4px;
+        }
+        
+        /* FPS Counter */
+        #fps-counter {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            color: #0f0;
+            font-size: 12px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        /* Weapon Panel - Bottom Left (Issue #4 - group all buttons together) */
+        #weapon-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        
+        .weapon-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .weapon-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            border: 3px solid #444;
+            background: linear-gradient(180deg, rgba(40, 40, 50, 0.95), rgba(20, 20, 30, 0.95));
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .weapon-btn:hover {
+            transform: scale(1.1);
+            border-color: #666;
+        }
+        
+        .weapon-btn.active {
+            border-color: #00ff88;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.6);
+        }
+        
+        .weapon-btn .weapon-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        
+        .weapon-btn .multiplier {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        .weapon-btn .cost {
+            font-size: 9px;
+            color: #aaa;
+            margin-top: 1px;
+        }
+        
+        .weapon-btn[data-weapon="1x"] { --weapon-color: #66ff66; }
+        .weapon-btn[data-weapon="3x"] { --weapon-color: #ffaa00; }
+        .weapon-btn[data-weapon="5x"] { --weapon-color: #00aaff; }
+        .weapon-btn[data-weapon="8x"] { --weapon-color: #ff44ff; }
+        
+        .weapon-btn.active .multiplier {
+            color: var(--weapon-color);
+        }
+        
+        /* Auto-shoot Toggle, Center View, and View Mode - Bottom Right */
+        #auto-shoot-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        
+        #auto-shoot-btn, #center-view-btn, #view-mode-btn {
+            padding: 10px 25px;
+            background: rgba(50, 50, 60, 0.9);
+            border: 2px solid #555;
+            border-radius: 25px;
+            color: #888;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        
+        #auto-shoot-btn:hover, #center-view-btn:hover, #view-mode-btn:hover {
+            border-color: #777;
+            color: #aaa;
+        }
+        
+        #auto-shoot-btn.active {
+            background: rgba(0, 200, 100, 0.3);
+            border-color: #00c864;
+            color: #00ff7f;
+            box-shadow: 0 0 15px rgba(0, 200, 100, 0.4);
+        }
+        
+        #center-view-btn {
+            background: rgba(60, 60, 80, 0.9);
+            border-color: #4488aa;
+            color: #88bbdd;
+        }
+        
+        #center-view-btn:hover {
+            background: rgba(70, 100, 130, 0.9);
+            border-color: #66aacc;
+            color: #aaddff;
+        }
+        
+        #view-mode-btn {
+            background: rgba(80, 60, 100, 0.9);
+            border-color: #8866aa;
+            color: #bb99dd;
+        }
+        
+        #view-mode-btn:hover {
+            background: rgba(100, 80, 130, 0.9);
+            border-color: #aa88cc;
+            color: #ddbbff;
+        }
+        
+        #view-mode-btn.active {
+            background: rgba(150, 100, 200, 0.3);
+            border-color: #aa66ff;
+            color: #cc99ff;
+            box-shadow: 0 0 15px rgba(150, 100, 200, 0.4);
+        }
+        
+        /* Settings Panel */
+        #settings-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 320px;
+            background: linear-gradient(180deg, rgba(30, 35, 50, 0.95), rgba(20, 25, 40, 0.98));
+            border: 2px solid rgba(100, 150, 200, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            pointer-events: auto;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        #settings-panel.visible {
+            display: block;
+        }
+        
+        #settings-panel h3 {
+            color: #88bbff;
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(100, 150, 200, 0.3);
+            padding-bottom: 12px;
+        }
+        
+        .settings-group {
+            margin-bottom: 18px;
+        }
+        
+        .settings-group label {
+            display: block;
+            color: #aaccee;
+            font-size: 13px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .settings-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(40, 50, 70, 0.9);
+            border: 1px solid rgba(100, 150, 200, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .settings-group select:hover {
+            border-color: rgba(100, 150, 200, 0.6);
+            background: rgba(50, 60, 80, 0.9);
+        }
+        
+        .settings-group select:focus {
+            outline: none;
+            border-color: #4488cc;
+            box-shadow: 0 0 8px rgba(68, 136, 204, 0.3);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(60, 80, 120, 0.6);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #4488cc, #2266aa);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+        }
+        
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #4488cc, #2266aa);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .slider-value {
+            min-width: 45px;
+            text-align: right;
+            color: #88ddff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        #settings-panel .settings-divider {
+            height: 1px;
+            background: rgba(100, 150, 200, 0.2);
+            margin: 16px 0;
+        }
+        
+        #settings-close-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(60, 80, 120, 0.8), rgba(40, 60, 100, 0.8));
+            border: 1px solid rgba(100, 150, 200, 0.4);
+            border-radius: 8px;
+            color: #aaccee;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+        
+        #settings-close-btn:hover {
+            background: linear-gradient(135deg, rgba(80, 100, 140, 0.9), rgba(60, 80, 120, 0.9));
+            border-color: rgba(100, 150, 200, 0.6);
+            color: #fff;
+        }
+        
+        /* Issue #16: Dynamic crosshair that shows weapon accuracy/spread */
+        #crosshair {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+            display: block;
+            transition: width 0.2s ease, height 0.2s ease;
+        }
+        
+        /* FPS mode: Crosshair always centered via CSS (more robust than JS positioning) */
+        /* Explicitly set all positioning properties to ensure centering regardless of previous state */
+        #crosshair.fps-mode {
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            display: block !important;
+            opacity: 1 !important;
+        }
+        
+        #crosshair .crosshair-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+        
+        #crosshair .crosshair-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #crosshair .crosshair-line {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.6);
+        }
+        
+        #crosshair .crosshair-line.top {
+            width: 2px;
+            height: 8px;
+            left: 50%;
+            top: 4px;
+            transform: translateX(-50%);
+        }
+        
+        #crosshair .crosshair-line.bottom {
+            width: 2px;
+            height: 8px;
+            left: 50%;
+            bottom: 4px;
+            transform: translateX(-50%);
+        }
+        
+        #crosshair .crosshair-line.left {
+            width: 8px;
+            height: 2px;
+            top: 50%;
+            left: 4px;
+            transform: translateY(-50%);
+        }
+        
+        #crosshair .crosshair-line.right {
+            width: 8px;
+            height: 2px;
+            top: 50%;
+            right: 4px;
+            transform: translateY(-50%);
+        }
+        
+        /* Crosshair color based on weapon */
+        #crosshair.weapon-1x .crosshair-ring { border-color: rgba(102, 255, 102, 0.7); }
+        #crosshair.weapon-3x .crosshair-ring { border-color: rgba(255, 170, 0, 0.7); }
+        #crosshair.weapon-5x .crosshair-ring { border-color: rgba(0, 170, 255, 0.7); }
+        #crosshair.weapon-8x .crosshair-ring { border-color: rgba(255, 68, 255, 0.7); }
+        
+        /* Reward Animation */
+        .reward-popup {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff7f;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 127, 0.5);
+            pointer-events: none;
+            animation: rewardFloat 1.5s ease-out forwards;
+            z-index: 100;
+        }
+        
+        @keyframes rewardFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+        
+        /* Video Background for Home/Loading screens */
+        /* Video is BEHIND the lobby UI (z-index 999 < lobby's 1000) */
+        /* Lobby has transparent background so video shows through */
+        #video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 999;
+            pointer-events: none;
+        }
+        
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        /* Loading Screen Container - Box frame like lobby */
+        .loading-container {
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 20px;
+            padding: 30px 20px;
+            min-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(100, 150, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #loading-screen .game-title-img {
+            max-width: 95%;
+            width: 460px;
+            height: auto;
+            margin-bottom: 30px;
+            animation: titleShake 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes titleShake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            10% { transform: translateX(-2px) rotate(-0.5deg); }
+            20% { transform: translateX(2px) rotate(0.5deg); }
+            30% { transform: translateX(-2px) rotate(-0.5deg); }
+            40% { transform: translateX(2px) rotate(0.5deg); }
+            50% { transform: translateX(-1px) rotate(-0.25deg); }
+            60% { transform: translateX(1px) rotate(0.25deg); }
+            70% { transform: translateX(-1px) rotate(-0.25deg); }
+            80% { transform: translateX(1px) rotate(0.25deg); }
+            90% { transform: translateX(0) rotate(0deg); }
+        }
+        
+        #loading-bar {
+            width: 300px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        #loading-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00bfff, #00ff88);
+            transition: width 0.3s ease;
+        }
+        
+        #loading-text {
+            color: #87ceeb;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        /* Map Loading Overlay - transparent background to show video behind */
+        #map-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* FIX: Use transparent background so video shows through like home page */
+            background: transparent;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        /* Map Loading Container - Box frame like lobby */
+        .map-loading-container {
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 20px;
+            padding: 30px 20px;
+            min-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(100, 150, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #map-loading-overlay .game-title-img {
+            max-width: 95%;
+            width: 460px;
+            height: auto;
+            margin-bottom: 20px;
+            animation: titleShake 0.5s ease-in-out infinite;
+        }
+        
+        #map-loading-overlay .loading-info {
+            color: #87ceeb;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        #map-loading-bar-container {
+            width: 400px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        #map-loading-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00bfff, #00ff88);
+            transition: width 0.2s ease;
+        }
+        
+        #map-loading-percent {
+            color: #00ff88;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        #map-loading-size {
+            color: #6699aa;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        /* Instructions */
+        #instructions {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+            text-align: right;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        
+        /* Issue #5: Rare Fish Effects */
+        /* Screen shake animation */
+        @keyframes screenShake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .screen-shake {
+            animation: screenShake 0.5s ease-in-out;
+        }
+        
+        /* Issue #14: Enhanced weapon VFX - Light shake for 5x weapon */
+        @keyframes shakeLight {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-2px, 1px); }
+            20% { transform: translate(2px, -1px); }
+            30% { transform: translate(-1px, 2px); }
+            40% { transform: translate(1px, -2px); }
+            50% { transform: translate(-2px, -1px); }
+            60% { transform: translate(2px, 1px); }
+            70% { transform: translate(-1px, -1px); }
+            80% { transform: translate(1px, 1px); }
+            90% { transform: translate(-1px, 0); }
+        }
+        
+        .shake-light {
+            animation: shakeLight 0.15s ease-in-out;
+        }
+        
+        /* Issue #14: Enhanced weapon VFX - Strong shake for 8x weapon */
+        @keyframes shakeStrong {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-8px, 4px); }
+            20% { transform: translate(8px, -4px); }
+            30% { transform: translate(-6px, 6px); }
+            40% { transform: translate(6px, -6px); }
+            50% { transform: translate(-8px, -4px); }
+            60% { transform: translate(8px, 4px); }
+            70% { transform: translate(-4px, -6px); }
+            80% { transform: translate(4px, 6px); }
+            90% { transform: translate(-2px, 0); }
+        }
+        
+        .shake-strong {
+            animation: shakeStrong 0.3s ease-in-out;
+        }
+        
+        /* Red pulsing border */
+        @keyframes redPulse {
+            0%, 100% { box-shadow: inset 0 0 30px rgba(255, 0, 0, 0); }
+            50% { box-shadow: inset 0 0 60px rgba(255, 0, 0, 0.6); }
+        }
+        
+        .red-pulse-border {
+            animation: redPulse 0.5s ease-in-out 3;
+        }
+        
+        /* Rare fish notification */
+        .rare-fish-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            animation: notificationPop 2s ease-out forwards;
+            pointer-events: none;
+        }
+        
+        @keyframes notificationPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            40% { transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        /* ============ MULTIPLAYER LOBBY STYLES ============ */
+        #multiplayer-lobby {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .lobby-container {
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 20px;
+            padding: 30px 20px;
+            min-width: 500px;
+            max-width: 520px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(100, 150, 255, 0.2);
+        }
+        
+        .lobby-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .lobby-title .game-title-img {
+            max-width: 95%;
+            width: 480px;
+            height: auto;
+            animation: titleShake 0.5s ease-in-out infinite;
+        }
+        
+        #connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 25px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        #connection-status.status-disconnected {
+            background: rgba(255, 100, 100, 0.2);
+            border: 1px solid rgba(255, 100, 100, 0.5);
+            color: #ff8888;
+        }
+        
+        #connection-status.status-connecting {
+            background: rgba(255, 200, 100, 0.2);
+            border: 1px solid rgba(255, 200, 100, 0.5);
+            color: #ffcc88;
+        }
+        
+        #connection-status.status-connected {
+            background: rgba(100, 255, 150, 0.2);
+            border: 1px solid rgba(100, 255, 150, 0.5);
+            color: #88ff99;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        #lobby-main-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        #player-name-input, #room-code-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 18px;
+            background: rgba(0, 50, 100, 0.5);
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        #player-name-input:focus, #room-code-input:focus {
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+        
+        .lobby-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            background: linear-gradient(135deg, rgba(50, 100, 200, 0.6), rgba(30, 70, 150, 0.6));
+            border: 2px solid rgba(100, 150, 255, 0.4);
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .lobby-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(70, 130, 230, 0.8), rgba(50, 100, 200, 0.8));
+            border-color: #00ffff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .lobby-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .lobby-btn.primary {
+            background: linear-gradient(135deg, rgba(0, 200, 150, 0.7), rgba(0, 150, 100, 0.7));
+            border-color: rgba(0, 255, 200, 0.5);
+        }
+        
+        .lobby-btn.primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(0, 230, 180, 0.9), rgba(0, 180, 130, 0.9));
+            border-color: #00ffcc;
+        }
+        
+        .lobby-btn.secondary {
+            background: linear-gradient(135deg, rgba(150, 100, 100, 0.6), rgba(120, 70, 70, 0.6));
+            border-color: rgba(255, 150, 150, 0.4);
+        }
+        
+        .lobby-btn.secondary:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(180, 120, 120, 0.8), rgba(150, 90, 90, 0.8));
+            border-color: #ff9999;
+        }
+        
+        .btn-icon {
+            font-size: 20px;
+        }
+        
+        #join-room-panel h3, #room-lobby-panel h3 {
+            text-align: center;
+            color: #88ccff;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        #room-code-display {
+            color: #00ffff;
+            font-family: monospace;
+            letter-spacing: 3px;
+        }
+        
+        .panel-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .panel-buttons .lobby-btn {
+            flex: 1;
+        }
+        
+        #players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .player-slot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(0, 50, 100, 0.4);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            border-radius: 8px;
+        }
+        
+        .player-slot.empty {
+            opacity: 0.5;
+            border-style: dashed;
+        }
+        
+        .player-slot .player-name {
+            color: white;
+            font-weight: bold;
+        }
+        
+        .player-slot .player-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+        
+        .player-slot .player-status.ready {
+            background: rgba(0, 255, 150, 0.3);
+            color: #88ff99;
+        }
+        
+        .player-slot .player-status.not-ready {
+            background: rgba(255, 200, 100, 0.3);
+            color: #ffcc88;
+        }
+        
+        .player-slot .player-status.host {
+            background: rgba(255, 200, 0, 0.3);
+            color: #ffdd44;
+        }
+        
+        #room-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #lobby-error {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(255, 100, 100, 0.2);
+            border: 1px solid rgba(255, 100, 100, 0.5);
+            border-radius: 8px;
+            color: #ff8888;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        /* Shortcut Key Labels on Buttons */
+        .shortcut-label {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: rgba(255, 200, 0, 0.9);
+            color: #000;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        
+        /* Shortcut highlight animation when key is pressed */
+        .shortcut-highlight {
+            animation: shortcut-flash 0.2s ease-out;
+        }
+        
+        @keyframes shortcut-flash {
+            0% { 
+                transform: scale(1.15);
+                box-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                box-shadow: none;
+            }
+        }
+        
+        /* Help Panel Styles */
+        #help-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, rgba(20, 30, 50, 0.98), rgba(10, 20, 40, 0.98));
+            border: 2px solid rgba(100, 200, 255, 0.5);
+            border-radius: 20px;
+            padding: 30px;
+            pointer-events: auto;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            min-width: 350px;
+        }
+        
+        #help-panel.visible {
+            display: block;
+        }
+        
+        #help-panel h3 {
+            color: #88ddff;
+            font-size: 22px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.3);
+            padding-bottom: 15px;
+        }
+        
+        #help-panel .help-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        #help-panel .help-section {
+            background: rgba(50, 80, 120, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        
+        #help-panel .help-section h4 {
+            color: #aaddff;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        #help-panel .help-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 6px 0;
+            color: #cceeff;
+            font-size: 14px;
+        }
+        
+        #help-panel .key {
+            background: linear-gradient(180deg, #4488cc, #2266aa);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        #help-close-btn {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(180deg, #4488cc, #2266aa);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #help-close-btn:hover {
+            background: linear-gradient(180deg, #55aadd, #3388bb);
+            transform: scale(1.02);
+        }
+        
+        /* First-time help hint */
+        #help-hint {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(100, 200, 255, 0.2);
+            border: 1px solid rgba(100, 200, 255, 0.5);
+            border-radius: 20px;
+            padding: 10px 20px;
+            color: #88ddff;
+            font-size: 14px;
+            animation: hint-pulse 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes hint-pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        /* MODULE TESTING PANEL STYLES */
+        #module-test-panel {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            width: 320px;
+            max-height: 70vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, rgba(40, 20, 60, 0.95), rgba(20, 10, 40, 0.95));
+            border: 2px solid #9C27B0;
+            border-radius: 15px;
+            padding: 20px;
+            z-index: 150;
+            pointer-events: auto;
+            box-shadow: 0 10px 40px rgba(156, 39, 176, 0.3);
+        }
+        
+        #module-test-panel h3 {
+            color: #E1BEE7;
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+        
+        #module-test-panel .settings-group {
+            margin-bottom: 15px;
+        }
+        
+        #module-test-panel .settings-group label {
+            color: #CE93D8;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        #module-test-panel select,
+        #module-test-panel input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #7B1FA2;
+            background: rgba(30, 15, 45, 0.9);
+            color: #fff;
+            font-size: 12px;
+        }
+        
+        #module-test-panel .settings-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #9C27B0, transparent);
+            margin: 15px 0;
+        }
+        
+        #module-test-close-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(180deg, #7B1FA2, #4A148C);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        #module-test-close-btn:hover {
+            background: linear-gradient(180deg, #9C27B0, #6A1B9A);
+        }
+        
+        #module-test-toggle:hover {
+            background: linear-gradient(135deg, rgba(156, 39, 176, 0.5), rgba(103, 58, 183, 0.4)) !important;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Video Background for Home/Loading screens -->
+    <!-- Video Background - Replace YOUR_R2_BUCKET_URL with your own R2 URL -->
+    <video id="video-background" autoplay loop muted playsinline>
+        <source src="assets/Loading_video.mp4" type="video/mp4">
+    </video>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-container">
+            <img src="assets/Fish-shooter-3D title.png" alt="3D Fish Shooter" class="game-title-img">
+            <div id="loading-bar">
+                <div id="loading-progress"></div>
+            </div>
+            <div id="loading-text">Loading...</div>
+        </div>
+    </div>
+    
+    <!-- Map Loading Overlay -->
+    <div id="map-loading-overlay">
+        <div class="map-loading-container">
+            <img src="assets/Fish-shooter-3D title.png" alt="3D Fish Shooter" class="game-title-img">
+            <div class="loading-info">Please wait while the underwater world loads...</div>
+            <div id="map-loading-bar-container">
+                <div id="map-loading-bar"></div>
+            </div>
+            <div id="map-loading-percent">0%</div>
+            <div id="map-loading-size">268 MB</div>
+        </div>
+    </div>
+    
+    <!-- Multiplayer Lobby -->
+    <div id="multiplayer-lobby" style="display: none;">
+        <div class="lobby-container">
+            <h1 class="lobby-title"><img src="assets/Fish-shooter-3D title.png" alt="3D Fish Shooter" class="game-title-img"></h1>
+            
+            <!-- Connection Status -->
+            <div id="connection-status" class="status-disconnected">
+                <span class="status-dot"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+            
+            <!-- Main Menu -->
+            <div id="lobby-main-menu">
+                <!-- FIX: Removed player name input - API will provide player name -->
+                
+                <button id="btn-single-player" class="lobby-btn primary">
+                    <span class="btn-icon">&#x1F3AE;</span>
+                    Single Player
+                </button>
+                
+                <button id="btn-create-room" class="lobby-btn">
+                    <span class="btn-icon">&#x2795;</span>
+                    Create Room
+                </button>
+                
+                <button id="btn-join-room" class="lobby-btn">
+                    <span class="btn-icon">&#x1F465;</span>
+                    Join Room
+                </button>
+                
+                <button id="btn-quick-match" class="lobby-btn" disabled>
+                    <span class="btn-icon">&#x26A1;</span>
+                    Quick Match (Coming Soon)
+                </button>
+            </div>
+            
+            <!-- Join Room Panel -->
+            <div id="join-room-panel" style="display: none;">
+                <h3>Join Room</h3>
+                <input type="text" id="room-code-input" placeholder="Enter Room Code" maxlength="6" style="text-transform: uppercase;">
+                <div class="panel-buttons">
+                    <button id="btn-join-confirm" class="lobby-btn primary">Join</button>
+                    <button id="btn-join-cancel" class="lobby-btn secondary">Cancel</button>
+                </div>
+            </div>
+            
+            <!-- Room Lobby Panel -->
+            <div id="room-lobby-panel" style="display: none;">
+                <h3>Room: <span id="room-code-display">------</span></h3>
+                
+                <div id="players-list">
+                    <!-- Player slots will be added dynamically -->
+                </div>
+                
+                <div id="room-controls">
+                    <button id="btn-ready" class="lobby-btn">Ready</button>
+                    <button id="btn-start-game" class="lobby-btn primary" style="display: none;">Start Game</button>
+                    <button id="btn-leave-room" class="lobby-btn secondary">Leave Room</button>
+                </div>
+            </div>
+            
+            <!-- Error Message -->
+            <div id="lobby-error" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- UI Overlay -->
+        <div id="ui-overlay">
+            <!-- Balance Display - Top Left -->
+            <div id="balance-display">
+                <div class="balance-icon">$</div>
+                <span class="balance-value" id="balance-value">1000.00</span>
+                <span class="balance-label">USDT</span>
+            </div>
+            
+            <!-- Settings Container - Top Right (Issue #19: Unified container) -->
+            <div id="settings-container" onclick="toggleSettingsPanel()">
+                <span class="settings-icon">&#9881;</span>
+                <span class="settings-label">Settings</span>
+                <span class="settings-shortcut">ESC</span>
+            </div>
+            
+            <!-- Settings Panel -->
+            <div id="settings-panel">
+                <h3>Settings</h3>
+                
+                <!-- Graphics Quality (controls both particles and shadows) -->
+                <div class="settings-group">
+                    <label>Graphics Quality</label>
+                    <select id="graphics-quality">
+                        <option value="low">Low (80+ FPS)</option>
+                        <option value="medium" selected>Medium (60+ FPS)</option>
+                        <option value="high">High (Best Visuals)</option>
+                    </select>
+                    <small style="color: #888; font-size: 10px; display: block; margin-top: 4px;">
+                        Low/Medium: No shadows, reduced particles | High: Full shadows
+                    </small>
+                </div>
+                
+                <!-- Shadow Quality (now auto-controlled by Graphics Quality) -->
+                <div class="settings-group" style="opacity: 0.6;">
+                    <label>Shadow Quality <span style="font-size: 10px;">(Auto)</span></label>
+                    <select id="shadow-quality" disabled>
+                        <option value="off">Off</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high" selected>High</option>
+                    </select>
+                    <small style="color: #888; font-size: 10px; display: block; margin-top: 4px;">
+                        Controlled by Graphics Quality setting
+                    </small>
+                </div>
+                
+                <div class="settings-divider"></div>
+                
+                <!-- Background Music Volume -->
+                <div class="settings-group">
+                    <label>Background Music Volume</label>
+                    <div class="slider-container">
+                        <input type="range" id="music-volume" min="0" max="100" step="1" value="50">
+                        <span class="slider-value" id="music-volume-value">50%</span>
+                    </div>
+                </div>
+                
+                <!-- Sound Effects Volume -->
+                <div class="settings-group">
+                    <label>Sound Effects Volume</label>
+                    <div class="slider-container">
+                        <input type="range" id="sfx-volume" min="0" max="100" step="1" value="70">
+                        <span class="slider-value" id="sfx-volume-value">70%</span>
+                    </div>
+                </div>
+                
+                <div class="settings-divider"></div>
+                
+                <!-- Third Person Sensitivity -->
+                <div class="settings-group">
+                    <label>Third Person Sensitivity</label>
+                    <div class="slider-container">
+                        <input type="range" id="third-person-sensitivity" min="0.1" max="2.0" step="0.1" value="1.0">
+                        <span class="slider-value" id="third-person-sensitivity-value">1.0x</span>
+                    </div>
+                </div>
+                
+                <!-- FPS Sensitivity (10 levels: 10% to 100%) -->
+                <div class="settings-group">
+                    <label>FPS Sensitivity</label>
+                    <div class="slider-container">
+                        <input type="range" id="fps-sensitivity" min="1" max="10" step="1" value="5">
+                        <span class="slider-value" id="fps-sensitivity-value">50%</span>
+                    </div>
+                </div>
+                
+                            <button id="settings-close-btn">Close</button>
+                        </div>
+            
+                        <!-- MODULE TESTING PANEL - For Art Department -->
+                        <div id="module-test-panel" style="display: none;">
+                            <h3>Module Testing Panel</h3>
+                            <p style="color: #aaa; font-size: 11px; margin-bottom: 15px;">Art department module testing interface</p>
+                
+                            <div class="settings-group">
+                                <label>R2 Mode</label>
+                                <select id="r2-mode-select">
+                                    <option value="off" selected>Off (Local Assets)</option>
+                                    <option value="on">On (Use R2)</option>
+                                </select>
+                                <small style="color: #888; font-size: 10px;">Toggle R2 asset loading</small>
+                            </div>
+                
+                            <div class="settings-divider"></div>
+                
+                            <div class="settings-group">
+                                <label>Custom Weapon GLB URL</label>
+                                <input type="text" id="custom-weapon-url" placeholder="https://... or local path" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;">
+                                <button onclick="loadCustomWeapon()" style="margin-top: 8px; padding: 6px 12px; background: #4CAF50; border: none; border-radius: 4px; color: white; cursor: pointer;">Load Weapon</button>
+                            </div>
+                
+                            <div class="settings-group">
+                                <label>Custom Fish GLB URL</label>
+                                <input type="text" id="custom-fish-url" placeholder="https://... or local path" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;">
+                                <button onclick="loadCustomFish()" style="margin-top: 8px; padding: 6px 12px; background: #2196F3; border: none; border-radius: 4px; color: white; cursor: pointer;">Load Fish</button>
+                            </div>
+                
+                            <div class="settings-group">
+                                <label>Custom Map GLB URL</label>
+                                <input type="text" id="custom-map-url" placeholder="https://... or local path" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;">
+                                <button onclick="loadCustomMap()" style="margin-top: 8px; padding: 6px 12px; background: #FF9800; border: none; border-radius: 4px; color: white; cursor: pointer;">Load Map</button>
+                            </div>
+                
+                            <div class="settings-divider"></div>
+                
+                            <div class="settings-group">
+                                <label>Model Scale</label>
+                                <div class="slider-container">
+                                    <input type="range" id="model-scale" min="0.1" max="5.0" step="0.1" value="1.0">
+                                    <span class="slider-value" id="model-scale-value">1.0x</span>
+                                </div>
+                            </div>
+                
+                            <div class="settings-group">
+                                <label>Upload Local GLB File</label>
+                                <input type="file" id="glb-file-upload" accept=".glb,.gltf" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;">
+                                <select id="upload-target" style="margin-top: 8px; width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;">
+                                    <option value="weapon">Apply to Weapon</option>
+                                    <option value="fish">Apply to Fish</option>
+                                    <option value="map">Apply to Map</option>
+                                    <option value="coin">Apply to Coin</option>
+                                </select>
+                                <button onclick="applyUploadedGLB()" style="margin-top: 8px; padding: 6px 12px; background: #9C27B0; border: none; border-radius: 4px; color: white; cursor: pointer;">Apply Uploaded Model</button>
+                            </div>
+                
+                            <button id="module-test-close-btn" onclick="toggleModuleTestPanel()">Close</button>
+                        </div>
+            
+                        <!-- Module Test Toggle Button - Top Left (below balance) -->
+                        <div id="module-test-toggle" onclick="toggleModuleTestPanel()" style="position: absolute; top: 80px; left: 20px; background: linear-gradient(135deg, rgba(156, 39, 176, 0.3), rgba(103, 58, 183, 0.2)); border: 2px solid #9C27B0; border-radius: 10px; padding: 8px 16px; cursor: pointer; pointer-events: auto; z-index: 100;">
+                            <span style="color: #E1BEE7; font-size: 14px; font-weight: bold;">Module Test (M)</span>
+                        </div>
+            
+                        <!-- FPS Counter -->
+            <div id="fps-counter">FPS: 60</div>
+            
+            <!-- Instructions -->
+            <div id="instructions">
+                Click to shoot<br>
+                Right-drag to rotate view<br>
+                Q/E keys to rotate camera<br>
+                Press H for shortcuts<br>
+                Select weapon below
+            </div>
+            
+            <!-- Auto-shoot Toggle, View Mode, and Center View - Bottom Right -->
+            <div id="auto-shoot-container">
+                <button id="auto-shoot-btn">AUTO OFF (A)</button>
+                <button id="view-mode-btn">3RD PERSON (Space)</button>
+                <button id="center-view-btn">CENTER VIEW (C)</button>
+            </div>
+            
+            <!-- Weapon Panel - Updated: 4 weapons only (1x, 3x, 5x, 8x) -->
+            <div id="weapon-panel">
+                <div class="weapon-group">
+                    <button class="weapon-btn active" data-weapon="1x">
+                        <span class="shortcut-label">1</span>
+                        <span class="weapon-icon">&#x2022;</span>
+                        <span class="multiplier">1x</span>
+                        <span class="cost">1 USDT</span>
+                    </button>
+                    <button class="weapon-btn" data-weapon="3x">
+                        <span class="shortcut-label">2</span>
+                        <span class="weapon-icon">&#x2234;</span>
+                        <span class="multiplier">3x</span>
+                        <span class="cost">3 USDT</span>
+                    </button>
+                </div>
+                <div class="weapon-group">
+                    <button class="weapon-btn" data-weapon="5x">
+                        <span class="shortcut-label">3</span>
+                        <span class="weapon-icon">&#x26A1;</span>
+                        <span class="multiplier">5x</span>
+                        <span class="cost">5 USDT</span>
+                    </button>
+                    <button class="weapon-btn" data-weapon="8x">
+                        <span class="shortcut-label">4</span>
+                        <span class="weapon-icon">&#x1F4A3;</span>
+                        <span class="multiplier">8x</span>
+                        <span class="cost">8 USDT</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Issue #16: Dynamic crosshair showing weapon accuracy -->
+        <div id="crosshair" class="weapon-1x">
+            <div class="crosshair-ring"></div>
+            <div class="crosshair-dot"></div>
+            <div class="crosshair-line top"></div>
+            <div class="crosshair-line bottom"></div>
+            <div class="crosshair-line left"></div>
+            <div class="crosshair-line right"></div>
+        </div>
+    </div>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GLTFLoader for 3D map loading -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- FIX: SkeletonUtils for proper skinned mesh cloning - required for GLB fish models to move correctly -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+    <!-- Socket.IO for multiplayer -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Multiplayer Manager -->
+    <script src="multiplayer.js"></script>
+    <!-- Binary Protocol Client (PDF Spec Section 4.3) -->
+    <script src="BinarySocket.js"></script>
+        <!-- Main Game -->
+        <script src="game.js"></script>
+    
+        <!-- MODULE TESTING FUNCTIONS - For Art Department -->
+        <script>
+            // Module Testing Panel Functions
+            let moduleTestPanelVisible = false;
+            let uploadedGLBFile = null;
+        
+            function toggleModuleTestPanel() {
+                const panel = document.getElementById('module-test-panel');
+                moduleTestPanelVisible = !moduleTestPanelVisible;
+                panel.style.display = moduleTestPanelVisible ? 'block' : 'none';
+            }
+        
+            // Keyboard shortcut for module test panel (M key)
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'm' || e.key === 'M') {
+                    // Don't trigger if typing in an input field
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    toggleModuleTestPanel();
+                }
+            });
+        
+            // R2 Mode Toggle
+            document.addEventListener('DOMContentLoaded', function() {
+                const r2ModeSelect = document.getElementById('r2-mode-select');
+                if (r2ModeSelect) {
+                    r2ModeSelect.addEventListener('change', function() {
+                        const useR2 = this.value === 'on';
+                        if (typeof MODULE_TEST_CONFIG !== 'undefined') {
+                            MODULE_TEST_CONFIG.useR2 = useR2;
+                            console.log('[MODULE-TEST] R2 mode:', useR2 ? 'ON' : 'OFF');
+                            alert('R2 Mode: ' + (useR2 ? 'ON - Using R2 assets' : 'OFF - Using local assets') + '\nReload the page for changes to take effect.');
+                        }
+                    });
+                }
+            
+                // Model scale slider
+                const modelScaleSlider = document.getElementById('model-scale');
+                const modelScaleValue = document.getElementById('model-scale-value');
+                if (modelScaleSlider && modelScaleValue) {
+                    modelScaleSlider.addEventListener('input', function() {
+                        modelScaleValue.textContent = this.value + 'x';
+                        if (typeof MODULE_TEST_CONFIG !== 'undefined') {
+                            MODULE_TEST_CONFIG.weaponScale = parseFloat(this.value);
+                            MODULE_TEST_CONFIG.fishScale = parseFloat(this.value);
+                            MODULE_TEST_CONFIG.mapScale = parseFloat(this.value);
+                        }
+                    });
+                }
+            
+                // File upload handler
+                const fileUpload = document.getElementById('glb-file-upload');
+                if (fileUpload) {
+                    fileUpload.addEventListener('change', function(e) {
+                        if (e.target.files.length > 0) {
+                            uploadedGLBFile = e.target.files[0];
+                            console.log('[MODULE-TEST] File selected:', uploadedGLBFile.name);
+                        }
+                    });
+                }
+            });
+        
+            // Load custom weapon from URL
+            function loadCustomWeapon() {
+                const url = document.getElementById('custom-weapon-url').value.trim();
+                if (!url) {
+                    alert('Please enter a weapon GLB URL');
+                    return;
+                }
+            
+                console.log('[MODULE-TEST] Loading custom weapon from:', url);
+                if (typeof MODULE_TEST_CONFIG !== 'undefined') {
+                    MODULE_TEST_CONFIG.customWeaponUrl = url;
+                }
+            
+                // Try to load the weapon using the game's loader
+                if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+                    const loader = new THREE.GLTFLoader();
+                    loader.load(url, 
+                        function(gltf) {
+                            console.log('[MODULE-TEST] Custom weapon loaded successfully');
+                            alert('Weapon model loaded successfully!\nModel will be applied to current weapon.');
+                            // Store for use in game
+                            window.customWeaponModel = gltf.scene;
+                        },
+                        function(progress) {
+                            console.log('[MODULE-TEST] Loading progress:', (progress.loaded / progress.total * 100).toFixed(1) + '%');
+                        },
+                        function(error) {
+                            console.error('[MODULE-TEST] Failed to load weapon:', error);
+                            alert('Failed to load weapon model. Check the URL and try again.');
+                        }
+                    );
+                }
+            }
+        
+            // Load custom fish from URL
+            function loadCustomFish() {
+                const url = document.getElementById('custom-fish-url').value.trim();
+                if (!url) {
+                    alert('Please enter a fish GLB URL');
+                    return;
+                }
+            
+                console.log('[MODULE-TEST] Loading custom fish from:', url);
+                if (typeof MODULE_TEST_CONFIG !== 'undefined') {
+                    MODULE_TEST_CONFIG.customFishUrl = url;
+                }
+            
+                if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+                    const loader = new THREE.GLTFLoader();
+                    loader.load(url, 
+                        function(gltf) {
+                            console.log('[MODULE-TEST] Custom fish loaded successfully');
+                            alert('Fish model loaded successfully!\nModel will be used for new fish spawns.');
+                            window.customFishModel = gltf.scene;
+                        },
+                        function(progress) {
+                            console.log('[MODULE-TEST] Loading progress:', (progress.loaded / progress.total * 100).toFixed(1) + '%');
+                        },
+                        function(error) {
+                            console.error('[MODULE-TEST] Failed to load fish:', error);
+                            alert('Failed to load fish model. Check the URL and try again.');
+                        }
+                    );
+                }
+            }
+        
+            // Load custom map from URL
+            function loadCustomMap() {
+                const url = document.getElementById('custom-map-url').value.trim();
+                if (!url) {
+                    alert('Please enter a map GLB URL');
+                    return;
+                }
+            
+                console.log('[MODULE-TEST] Loading custom map from:', url);
+                if (typeof MODULE_TEST_CONFIG !== 'undefined') {
+                    MODULE_TEST_CONFIG.customMapUrl = url;
+                }
+            
+                if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+                    const loader = new THREE.GLTFLoader();
+                    loader.load(url, 
+                        function(gltf) {
+                            console.log('[MODULE-TEST] Custom map loaded successfully');
+                            alert('Map model loaded successfully!\nReload the game to apply the new map.');
+                            window.customMapModel = gltf.scene;
+                        },
+                        function(progress) {
+                            console.log('[MODULE-TEST] Loading progress:', (progress.loaded / progress.total * 100).toFixed(1) + '%');
+                        },
+                        function(error) {
+                            console.error('[MODULE-TEST] Failed to load map:', error);
+                            alert('Failed to load map model. Check the URL and try again.');
+                        }
+                    );
+                }
+            }
+        
+            // Apply uploaded GLB file
+            function applyUploadedGLB() {
+                if (!uploadedGLBFile) {
+                    alert('Please select a GLB file first');
+                    return;
+                }
+            
+                const target = document.getElementById('upload-target').value;
+                const reader = new FileReader();
+            
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                
+                    if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+                        const loader = new THREE.GLTFLoader();
+                        loader.parse(arrayBuffer, '', 
+                            function(gltf) {
+                                console.log('[MODULE-TEST] Uploaded model parsed successfully for:', target);
+                            
+                                switch(target) {
+                                    case 'weapon':
+                                        window.customWeaponModel = gltf.scene;
+                                        alert('Weapon model applied! It will be used for the current weapon.');
+                                        break;
+                                    case 'fish':
+                                        window.customFishModel = gltf.scene;
+                                        alert('Fish model applied! It will be used for new fish spawns.');
+                                        break;
+                                    case 'map':
+                                        window.customMapModel = gltf.scene;
+                                        alert('Map model applied! Reload the game to see changes.');
+                                        break;
+                                    case 'coin':
+                                        window.customCoinModel = gltf.scene;
+                                        alert('Coin model applied! It will be used for coin drops.');
+                                        break;
+                                }
+                            },
+                            function(error) {
+                                console.error('[MODULE-TEST] Failed to parse uploaded model:', error);
+                                alert('Failed to parse the GLB file. Make sure it is a valid GLB/GLTF file.');
+                            }
+                        );
+                    }
+                };
+            
+                reader.readAsArrayBuffer(uploadedGLBFile);
+            }
+        </script>
+    
+        <!-- Lobby UI Controller -->
+        <script>
+            // Lobby UI Controller
+        (function() {
+            let multiplayer = null;
+            let isReady = false;
+            
+            // DOM Elements
+            const lobbyScreen = document.getElementById('multiplayer-lobby');
+            const loadingScreen = document.getElementById('loading-screen');
+            const gameContainer = document.getElementById('game-container');
+            const connectionStatus = document.getElementById('connection-status');
+            const mainMenu = document.getElementById('lobby-main-menu');
+            const joinRoomPanel = document.getElementById('join-room-panel');
+            const roomLobbyPanel = document.getElementById('room-lobby-panel');
+            const lobbyError = document.getElementById('lobby-error');
+            // FIX: Player name input removed - API will provide player name
+            // const playerNameInput = document.getElementById('player-name-input');
+            const roomCodeInput = document.getElementById('room-code-input');
+            const roomCodeDisplay = document.getElementById('room-code-display');
+            const playersList = document.getElementById('players-list');
+            
+            // Buttons
+            const btnSinglePlayer = document.getElementById('btn-single-player');
+            const btnCreateRoom = document.getElementById('btn-create-room');
+            const btnJoinRoom = document.getElementById('btn-join-room');
+            const btnJoinConfirm = document.getElementById('btn-join-confirm');
+            const btnJoinCancel = document.getElementById('btn-join-cancel');
+            const btnReady = document.getElementById('btn-ready');
+            const btnStartGame = document.getElementById('btn-start-game');
+            const btnLeaveRoom = document.getElementById('btn-leave-room');
+            
+            // Initialize lobby after game loads
+            // FIX: Track initialization state to prevent double-init (which causes Connected/Connecting flicker)
+            let lobbyInitialized = false;
+            
+            window.addEventListener('load', function() {
+                // Wait for game to finish loading
+                const checkLoaded = setInterval(function() {
+                    if (typeof window.gameLoaded !== 'undefined' && window.gameLoaded) {
+                        clearInterval(checkLoaded);
+                        clearTimeout(fallbackTimeout);
+                        initLobby();
+                    }
+                }, 100);
+                
+                // Fallback: show lobby after 3 seconds
+                const fallbackTimeout = setTimeout(function() {
+                    clearInterval(checkLoaded);
+                    initLobby();
+                }, 3000);
+            });
+            
+            function initLobby() {
+                // FIX: Prevent double initialization which causes connection status flicker
+                if (lobbyInitialized) {
+                    console.log('[LOBBY] Already initialized, skipping');
+                    return;
+                }
+                lobbyInitialized = true;
+                
+                // Hide loading, show lobby
+                loadingScreen.style.display = 'none';
+                lobbyScreen.style.display = 'flex';
+                gameContainer.style.display = 'none';
+                
+                // Create multiplayer manager
+                multiplayer = new MultiplayerManager(window.game || null);
+                window.multiplayer = multiplayer;
+                
+                // Setup callbacks
+                setupMultiplayerCallbacks();
+                
+                // Connect to server
+                connectToServer();
+                
+                // Setup button handlers
+                setupButtonHandlers();
+            }
+            
+            function connectToServer() {
+                updateConnectionStatus('connecting');
+                
+                multiplayer.connect()
+                    .then(() => {
+                        updateConnectionStatus('connected');
+                    })
+                    .catch((error) => {
+                        console.error('Failed to connect:', error);
+                        updateConnectionStatus('disconnected');
+                        showError('Failed to connect to server. Please refresh and try again.');
+                    });
+            }
+            
+            function updateConnectionStatus(status) {
+                connectionStatus.className = 'status-' + status;
+                const statusText = connectionStatus.querySelector('.status-text');
+                
+                switch (status) {
+                    case 'connected':
+                        statusText.textContent = 'Connected';
+                        break;
+                    case 'connecting':
+                        statusText.textContent = 'Connecting...';
+                        break;
+                    case 'disconnected':
+                        statusText.textContent = 'Disconnected';
+                        break;
+                }
+            }
+            
+            function setupMultiplayerCallbacks() {
+                multiplayer.onConnected = () => {
+                    updateConnectionStatus('connected');
+                };
+                
+                multiplayer.onDisconnected = (reason) => {
+                    updateConnectionStatus('disconnected');
+                    showError('Disconnected from server: ' + reason);
+                };
+                
+                multiplayer.onRoomCreated = (data) => {
+                    showRoomLobby(data.roomCode, true);
+                };
+                
+                multiplayer.onRoomJoined = (data) => {
+                    showRoomLobby(data.roomCode, false);
+                };
+                
+                multiplayer.onRoomState = (data) => {
+                    updatePlayersList(data.players);
+                    
+                    // Show start button for host if all ready
+                    if (multiplayer.isHost) {
+                        btnStartGame.style.display = 'block';
+                    }
+                };
+                
+                multiplayer.onGameStarted = (data) => {
+                    // Guard: Don't call startGame() for single-player mode
+                    // Single-player already called startSinglePlayerGame() directly
+                    // Calling startGame() would incorrectly set multiplayerMode = true
+                    if (multiplayer.isSinglePlayer) {
+                        console.log('[LOBBY] Skipping startGame() for single-player mode');
+                        return;
+                    }
+                    startGame();
+                };
+                
+                multiplayer.onError = (message) => {
+                    showError(message);
+                };
+                
+                multiplayer.onBalanceUpdate = (data) => {
+                    // Update balance display in game
+                    const balanceEl = document.getElementById('balance-value');
+                    if (balanceEl) {
+                        balanceEl.textContent = data.balance.toFixed(2);
+                    }
+                };
+            }
+            
+            // FIX: Play click sound on menu button clicks
+            function playMenuClickSound() {
+                if (typeof window.playMenuClick === 'function') {
+                    window.playMenuClick();
+                }
+            }
+            
+            function setupButtonHandlers() {
+                // Single Player
+                btnSinglePlayer.addEventListener('click', () => {
+                    playMenuClickSound();
+                    
+                    // FIX: Allow single player to start even without server connection
+                    // Single player mode doesn't require server - game works offline
+                    // FIX: Use default player name - API will provide actual name
+                    const playerName = 'Player';
+                    
+                    // Hide lobby, show game container
+                    lobbyScreen.style.display = 'none';
+                    gameContainer.style.display = 'block';
+                    
+                    // Call the new game start function (lazy initialization)
+                    if (typeof window.startSinglePlayerGame === 'function') {
+                        window.startSinglePlayerGame();
+                    }
+                    
+                    // Notify server if connected (non-blocking)
+                    if (multiplayer && multiplayer.connected) {
+                        multiplayer.startSinglePlayer(playerName);
+                    }
+                });
+                
+                // Create Room
+                btnCreateRoom.addEventListener('click', () => {
+                    playMenuClickSound();
+                    if (!multiplayer.connected) {
+                        showError('Not connected to server');
+                        return;
+                    }
+                    // FIX: Use default player name - API will provide actual name
+                    const playerName = 'Player';
+                    multiplayer.createRoom(playerName, true);
+                });
+                
+                // Join Room (show panel)
+                btnJoinRoom.addEventListener('click', () => {
+                    playMenuClickSound();
+                    mainMenu.style.display = 'none';
+                    joinRoomPanel.style.display = 'block';
+                    roomCodeInput.focus();
+                });
+                
+                // Join Room Confirm
+                btnJoinConfirm.addEventListener('click', () => {
+                    playMenuClickSound();
+                    const roomCode = roomCodeInput.value.trim().toUpperCase();
+                    if (!roomCode || roomCode.length < 4) {
+                        showError('Please enter a valid room code');
+                        return;
+                    }
+                    if (!multiplayer.connected) {
+                        showError('Not connected to server');
+                        return;
+                    }
+                    // FIX: Use default player name - API will provide actual name
+                    const playerName = 'Player';
+                    multiplayer.joinRoom(roomCode, playerName);
+                });
+                
+                // Join Room Cancel
+                btnJoinCancel.addEventListener('click', () => {
+                    playMenuClickSound();
+                    joinRoomPanel.style.display = 'none';
+                    mainMenu.style.display = 'flex';
+                    roomCodeInput.value = '';
+                });
+                
+                // Ready Toggle
+                btnReady.addEventListener('click', () => {
+                    playMenuClickSound();
+                    isReady = !isReady;
+                    multiplayer.setReady(isReady);
+                    btnReady.textContent = isReady ? 'Not Ready' : 'Ready';
+                    btnReady.classList.toggle('primary', !isReady);
+                });
+                
+                // Start Game (host only)
+                btnStartGame.addEventListener('click', () => {
+                    playMenuClickSound();
+                    multiplayer.startGame();
+                });
+                
+                // Leave Room
+                btnLeaveRoom.addEventListener('click', () => {
+                    playMenuClickSound();
+                    multiplayer.leaveRoom();
+                    // Cleanup multiplayer game state to prevent Boss UI bug
+                    if (typeof window.cleanupMultiplayerGame === 'function') {
+                        window.cleanupMultiplayerGame();
+                    }
+                    showMainMenu();
+                });
+                
+                // Room code input - auto uppercase
+                roomCodeInput.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                });
+            }
+            
+            function showMainMenu() {
+                mainMenu.style.display = 'flex';
+                joinRoomPanel.style.display = 'none';
+                roomLobbyPanel.style.display = 'none';
+                hideError();
+                isReady = false;
+                btnReady.textContent = 'Ready';
+                btnReady.classList.remove('primary');
+            }
+            
+            function showRoomLobby(roomCode, isHost) {
+                mainMenu.style.display = 'none';
+                joinRoomPanel.style.display = 'none';
+                roomLobbyPanel.style.display = 'block';
+                roomCodeDisplay.textContent = roomCode;
+                btnStartGame.style.display = isHost ? 'block' : 'none';
+                hideError();
+            }
+            
+            function updatePlayersList(players) {
+                playersList.innerHTML = '';
+                
+                // Create 4 slots
+                for (let i = 0; i < 4; i++) {
+                    const player = players.find(p => p.slotIndex === i);
+                    const slot = document.createElement('div');
+                    slot.className = 'player-slot' + (player ? '' : ' empty');
+                    
+                    if (player) {
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'player-name';
+                        nameSpan.textContent = player.playerName + (player.isHost ? ' (Host)' : '');
+                        
+                        const statusSpan = document.createElement('span');
+                        statusSpan.className = 'player-status ' + (player.isHost ? 'host' : (player.ready ? 'ready' : 'not-ready'));
+                        statusSpan.textContent = player.isHost ? 'HOST' : (player.ready ? 'READY' : 'NOT READY');
+                        
+                        slot.appendChild(nameSpan);
+                        slot.appendChild(statusSpan);
+                    } else {
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'player-name';
+                        nameSpan.textContent = 'Empty Slot';
+                        slot.appendChild(nameSpan);
+                    }
+                    
+                    playersList.appendChild(slot);
+                }
+            }
+            
+            function startGame() {
+                lobbyScreen.style.display = 'none';
+                gameContainer.style.display = 'block';
+                
+                // Initialize game with multiplayer mode
+                if (typeof window.startMultiplayerGame === 'function') {
+                    window.startMultiplayerGame(multiplayer);
+                }
+            }
+            
+            function showError(message) {
+                lobbyError.textContent = message;
+                lobbyError.style.display = 'block';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(hideError, 5000);
+            }
+            
+            function hideError() {
+                lobbyError.style.display = 'none';
+            }
+        })();
+    </script>
+</body>
+</html>

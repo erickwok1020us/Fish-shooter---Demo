@@ -835,8 +835,9 @@ const gameState = {
     mouseX: window.innerWidth / 2,
     mouseY: window.innerHeight / 2,
     // Camera view mode: 'third-person' or 'fps'
-    // Default to FPS mode with 35 degree upward angle for best fish viewing
-    viewMode: 'fps',
+    // Default to third-person mode - the game visually starts in third-person view
+    // FPS mode can be activated by pressing Space
+    viewMode: 'third-person',
     // Camera rotation state - horizontal (yaw) and vertical (pitch)
     cameraYaw: 0,
     cameraPitch: 0,
@@ -8900,12 +8901,15 @@ function initGameScene() {
         lastTime = performance.now();
         
         // Initialize camera based on default view mode
-        // Default is now FPS mode with 35 degree upward angle for optimal fish viewing
+        // Default is third-person mode - FPS mode can be activated by pressing Space
         if (gameState.viewMode === 'fps') {
             initFPSMode();
         } else {
             resetThirdPersonCamera();
         }
+        
+        // Update view mode button to match initial state
+        updateViewModeButton();
         
         // Apply RTP labels to weapon buttons if enabled
         applyRtpLabels();
@@ -16175,14 +16179,17 @@ function toggleViewMode() {
 }
 
 // Update the view mode button text
+// Button shows what mode you'll switch TO (not current mode)
 function updateViewModeButton() {
     const btn = document.getElementById('view-mode-btn');
     if (btn) {
         if (gameState.viewMode === 'fps') {
-            btn.textContent = 'FPS VIEW (Space)';
+            // Currently in FPS mode, button shows option to switch to third-person
+            btn.textContent = '3RD PERSON (Space)';
             btn.classList.add('active');
         } else {
-            btn.textContent = '3RD PERSON (Space)';
+            // Currently in third-person mode, button shows option to switch to FPS
+            btn.textContent = 'FPS VIEW (Space)';
             btn.classList.remove('active');
         }
     }

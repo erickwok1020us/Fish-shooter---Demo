@@ -14155,7 +14155,8 @@ class Bullet {
     
     // PERFORMANCE: Synchronous fire() - no async/await, uses pre-cached models
     // ACCURATE AIMING: Optional targetPoint parameter for 8x parabolic trajectory
-    fire(origin, direction, weaponKey, targetPoint) {
+    // SYNC BULLET: Optional targetDistance for dynamic speed calculation
+    fire(origin, direction, weaponKey, targetPoint, targetDistance) {
         this.weaponKey = weaponKey;
         const weapon = CONFIG.weapons[weaponKey];
         const glbConfig = WEAPON_GLB_CONFIG.weapons[weaponKey];
@@ -14173,8 +14174,21 @@ class Bullet {
             // Use physics-based velocity calculation for accurate parabolic trajectory
             calculateParabolicVelocity(origin, targetPoint, weapon.speed, this.velocity);
         } else {
+            // SYNC BULLET: Calculate dynamic speed based on target distance
+            // Bullet should reach target in BULLET_TRAVEL_TIME seconds for visual sync with hit
+            const BULLET_TRAVEL_TIME = 0.12; // 120ms - fast but visible
+            let bulletSpeed = weapon.speed; // Default speed
+            
+            if (targetDistance && targetDistance > 0) {
+                // Calculate speed to reach target in fixed time
+                // speed = distance / time
+                bulletSpeed = targetDistance / BULLET_TRAVEL_TIME;
+                // Clamp to reasonable range (min 500, max 8000 units/sec)
+                bulletSpeed = Math.max(500, Math.min(8000, bulletSpeed));
+            }
+            
             // Standard straight-line velocity for other weapons
-            this.velocity.copy(direction).normalize().multiplyScalar(weapon.speed);
+            this.velocity.copy(direction).normalize().multiplyScalar(bulletSpeed);
             
             // Legacy: Add upward arc for grenades without target point (fallback)
             if (this.isGrenade) {
@@ -14425,14 +14439,15 @@ function createBulletPool() {
 // Helper function to spawn a bullet in a specific direction
 // PERFORMANCE: Uses free-list for O(1) lookup instead of O(n) .find() scan
 // ACCURATE AIMING: Optional targetPoint parameter for 8x parabolic trajectory
-function spawnBulletFromDirection(origin, direction, weaponKey, targetPoint) {
+function spawnBulletFromDirection(origin, direction, weaponKey, targetPoint, targetDistance) {
     // PERFORMANCE: O(1) pop from free-list instead of O(n) .find()
     const bullet = freeBullets.pop();
     if (!bullet) return null;
     
     // No need to clone - Bullet.fire() uses copy() internally
     // ACCURATE AIMING: Pass targetPoint for 8x weapon parabolic trajectory
-    bullet.fire(origin, direction, weaponKey, targetPoint);
+    // SYNC BULLET: Pass targetDistance for dynamic speed calculation
+    bullet.fire(origin, direction, weaponKey, targetPoint, targetDistance);
     activeBullets.push(bullet);
     return bullet;
 }
@@ -14627,19 +14642,22 @@ function fireBullet(targetX, targetY) {
             // Get fish position for hit effect
             const fishPos = hitFish.group.position.clone();
             
+            // SYNC BULLET: Calculate distance from bullet spawn to fish for dynamic speed
+            const distanceToFish = bulletSpawnPoint.distanceTo(fishPos);
+            
             // Spawn visual bullet traveling along crosshair line
             if (weapon.type === 'spread') {
                 const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
-                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, null, distanceToFish);
                 fireBulletTempVectors.leftDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, spreadAngle);
-                spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.leftDir, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.leftDir, weaponKey, null, distanceToFish);
                 fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
-                spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey, null, distanceToFish);
             } else if (weapon.type === 'aoe') {
-                // AOE: Use fish area target point for parabolic trajectory
+                // AOE: Use fish area target point for parabolic trajectory (speed handled by parabolic calc)
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fpsTargetPoint);
             } else {
-                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, null, distanceToFish);
             }
             
             // Spawn hit effect at fish position (visual feedback that fish was hit)
@@ -14694,18 +14712,21 @@ function fireBullet(targetX, targetY) {
         // Calculate direction from muzzle to fish for visual bullet
         const visualDirection = new THREE.Vector3().subVectors(fishPos, muzzlePos).normalize();
         
+        // SYNC BULLET: Calculate distance from muzzle to fish for dynamic speed
+        const distanceToFish = muzzlePos.distanceTo(fishPos);
+        
         // Spawn visual bullet (purely cosmetic - damage already applied)
         if (weapon.type === 'spread') {
             const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
-            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, null, distanceToFish);
             fireBulletTempVectors.leftDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, spreadAngle);
-            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey);
+            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey, null, distanceToFish);
             fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
-            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
+            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey, null, distanceToFish);
         } else if (weapon.type === 'aoe') {
             spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, fishPos);
         } else {
-            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, null, distanceToFish);
         }
         
         // Spawn hit effect at fish position

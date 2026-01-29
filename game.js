@@ -14557,11 +14557,13 @@ function fireBullet(targetX, targetY) {
             // INSTANT HIT: Apply damage immediately (hitscan)
             const killed = hitFish.takeDamage(weapon.damage, weaponKey);
             
-            // Get fish position for visual bullet trajectory
+            // Get fish position for hit effect
             const fishPos = hitFish.group.position.clone();
             
-            // CS:GO STYLE: Calculate spawn point ON the camera ray for visual consistency
-            // This ensures bullet appears to come from crosshair, not from below
+            // CS:GO STYLE FIX: Bullet travels in CAMERA RAY DIRECTION, not toward fish center
+            // ROOT CAUSE: Fish center may not be exactly on camera ray (raycast hits bounding sphere edge)
+            // If bullet travels toward fish center, it deviates from crosshair line
+            // Solution: Bullet always travels along camera ray direction for zero parallax
             raycaster.setFromCamera({ x: 0, y: 0 }, camera);
             const cameraRayDir = raycaster.ray.direction;
             const cameraRayOrigin = raycaster.ray.origin;
@@ -14570,11 +14572,13 @@ function fireBullet(targetX, targetY) {
                 .copy(cameraRayOrigin)
                 .addScaledVector(cameraRayDir, distanceToMuzzle);
             
-            // Calculate direction from spawn point to fish for visual bullet
+            // USE CAMERA RAY DIRECTION - not direction to fish center!
+            // This ensures bullet stays on crosshair line at ALL distances
             const visualDirection = fireBulletTempVectors.fpsVisualDirection
-                .subVectors(fishPos, bulletSpawnPoint).normalize();
+                .copy(cameraRayDir);
             
-            // Spawn visual bullet FROM camera ray line (purely cosmetic - damage already applied)
+            // Spawn visual bullet FROM camera ray line, traveling IN camera ray direction
+            // (purely cosmetic - damage already applied, hit effect shows where fish was hit)
             if (weapon.type === 'spread') {
                 const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
@@ -14583,12 +14587,16 @@ function fireBullet(targetX, targetY) {
                 fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
                 spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey);
             } else if (weapon.type === 'aoe') {
-                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fishPos);
+                // AOE: Calculate target point along camera ray for parabolic trajectory
+                const aoeTargetPoint = fireBulletTempVectors.targetPoint
+                    .copy(cameraRayOrigin)
+                    .addScaledVector(cameraRayDir, 500);
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, aoeTargetPoint);
             } else {
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
             }
             
-            // Spawn hit effect at fish position
+            // Spawn hit effect at fish position (visual feedback that fish was hit)
             spawnHitEffect(fishPos, weaponKey);
             
             // Muzzle flash (still at muzzle for visual effect)

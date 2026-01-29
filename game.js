@@ -14592,7 +14592,7 @@ function fireBullet(targetX, targetY) {
         // ==================== CS:GO STYLE: FPS MISS CASE ====================
         // No fish hit - fire along camera ray direction to far distance
         // This ensures NO parallax - bullet goes exactly where crosshair points
-        const FAR_DISTANCE = 2000; // Far enough to be off-screen
+        const FAR_DISTANCE = 3000; // Far enough for deep underwater feel (not fish tank)
         
         // Get camera ray direction (through screen center)
         raycaster.setFromCamera({ x: 0, y: 0 }, camera);

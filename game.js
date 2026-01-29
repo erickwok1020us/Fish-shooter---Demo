@@ -14598,24 +14598,27 @@ function fireBullet(targetX, targetY) {
         }
         
         // Use the FAR intersection point (tMax) as target - where ray exits fish area
-        // This is the "zero distance" where bullet converges with crosshair
+        // This limits the crosshair target to fish swimming area boundary
         const targetDistance = Math.max(tMax, 100); // At least 100 units
         const fpsTargetPoint = fireBulletTempVectors.targetPoint
             .copy(cameraRayOrigin)
             .addScaledVector(cameraRayDir, targetDistance);
         
-        // USER'S APPROACH: Bullet spawns at MUZZLE, travels toward crosshair target point
-        // This creates a "zero distance" effect like real gun sights:
-        // - Bullet starts at muzzle (visible to player)
-        // - Bullet converges with crosshair at fish area boundary
-        // - At the fish area boundary distance, bullet hits exactly where crosshair points
+        // CS:GO/VALORANT STYLE: Bullet spawns ON camera ray, travels along camera ray
+        // The gun model and muzzle flash are purely cosmetic - bullet comes from crosshair
+        // This eliminates parallax because bullet is always on the crosshair line
+        //
+        // Spawn bullet at a point on camera ray that's in front of the weapon
+        // We use a fixed distance that puts the bullet visually near the crosshair
+        const BULLET_SPAWN_DISTANCE = 50; // Close to camera but visible
         const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
-            .copy(muzzlePos);
+            .copy(cameraRayOrigin)
+            .addScaledVector(cameraRayDir, BULLET_SPAWN_DISTANCE);
         
-        // Calculate direction from muzzle to target point on crosshair line
-        // This ensures bullet converges with crosshair at fish area boundary
+        // Bullet direction is EXACTLY the camera ray direction
+        // This ensures bullet stays on crosshair line throughout its flight
         const visualDirection = fireBulletTempVectors.fpsVisualDirection
-            .copy(fpsTargetPoint).sub(muzzlePos).normalize();
+            .copy(cameraRayDir);
         
         if (hitFish && hitFish.isActive) {
             // INSTANT HIT: Apply damage immediately (hitscan)

@@ -14560,27 +14560,38 @@ function fireBullet(targetX, targetY) {
             // Get fish position for visual bullet trajectory
             const fishPos = hitFish.group.position.clone();
             
-            // Calculate direction from muzzle to fish for visual bullet
-            const visualDirection = new THREE.Vector3().subVectors(fishPos, muzzlePos).normalize();
+            // CS:GO STYLE: Calculate spawn point ON the camera ray for visual consistency
+            // This ensures bullet appears to come from crosshair, not from below
+            raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+            const cameraRayDir = raycaster.ray.direction;
+            const cameraRayOrigin = raycaster.ray.origin;
+            const distanceToMuzzle = muzzlePos.distanceTo(cameraRayOrigin);
+            const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
+                .copy(cameraRayOrigin)
+                .addScaledVector(cameraRayDir, distanceToMuzzle);
             
-            // Spawn visual bullet (purely cosmetic - damage already applied)
+            // Calculate direction from spawn point to fish for visual bullet
+            const visualDirection = fireBulletTempVectors.fpsVisualDirection
+                .subVectors(fishPos, bulletSpawnPoint).normalize();
+            
+            // Spawn visual bullet FROM camera ray line (purely cosmetic - damage already applied)
             if (weapon.type === 'spread') {
                 const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
-                spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
                 fireBulletTempVectors.leftDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, spreadAngle);
-                spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.leftDir, weaponKey);
                 fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
-                spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey);
             } else if (weapon.type === 'aoe') {
-                spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, fishPos);
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fishPos);
             } else {
-                spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
             }
             
             // Spawn hit effect at fish position
             spawnHitEffect(fishPos, weaponKey);
             
-            // Muzzle flash
+            // Muzzle flash (still at muzzle for visual effect)
             spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
             
             // Apply recoil

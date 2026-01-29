@@ -2331,6 +2331,341 @@ const fpsCameraRecoilState = {
     returnDuration: 150  // Slower return (150ms)
 };
 
+// ==================== TARGET LOCK SYSTEM (Third-Person View) ====================
+// Sci-fi style targeting crosshair that follows hovered fish
+// Provides visual feedback and guarantees hit on locked target
+const targetLockState = {
+    targetedFish: null,           // Currently targeted fish
+    crosshairGroup: null,         // 3D crosshair group following the fish
+    lastHoveredFish: null,        // For detecting hover changes
+    highlightedFish: null         // Fish with highlight effect applied
+};
+
+// Temp vectors for target lock raycasting
+const targetLockTempVectors = {
+    rayOrigin: new THREE.Vector3(),
+    rayDir: new THREE.Vector3(),
+    fishPos: new THREE.Vector3(),
+    mouseNDC: new THREE.Vector2()
+};
+
+// ==================== TARGET LOCK FUNCTIONS ====================
+
+// Raycast from camera through mouse position to find fish under cursor
+// Returns the closest fish that the ray intersects, or null if none
+function raycastFishFromMouse(mouseX, mouseY) {
+    if (!camera || !activeFish || activeFish.length === 0) return null;
+    
+    // Convert screen coordinates to normalized device coordinates
+    targetLockTempVectors.mouseNDC.set(
+        (mouseX / window.innerWidth) * 2 - 1,
+        -(mouseY / window.innerHeight) * 2 + 1
+    );
+    
+    // Set up raycaster from camera through mouse point
+    raycaster.setFromCamera(targetLockTempVectors.mouseNDC, camera);
+    
+    const rayOrigin = raycaster.ray.origin;
+    const rayDir = raycaster.ray.direction;
+    
+    let closestFish = null;
+    let closestDistance = Infinity;
+    
+    // Check intersection with each active fish's bounding sphere
+    for (const fish of activeFish) {
+        if (!fish.isActive) continue;
+        
+        // Get fish world position
+        fish.group.getWorldPosition(targetLockTempVectors.fishPos);
+        const fishPos = targetLockTempVectors.fishPos;
+        const fishRadius = fish.boundingRadius;
+        
+        // Ray-sphere intersection test
+        // Vector from ray origin to sphere center
+        const oc = new THREE.Vector3().subVectors(rayOrigin, fishPos);
+        const a = rayDir.dot(rayDir);
+        const b = 2.0 * oc.dot(rayDir);
+        const c = oc.dot(oc) - fishRadius * fishRadius;
+        const discriminant = b * b - 4 * a * c;
+        
+        if (discriminant > 0) {
+            // Ray intersects sphere - calculate distance
+            const t = (-b - Math.sqrt(discriminant)) / (2.0 * a);
+            if (t > 0 && t < closestDistance) {
+                closestDistance = t;
+                closestFish = fish;
+            }
+        }
+    }
+    
+    return closestFish;
+}
+
+// Raycast from camera through screen center (for FPS mode)
+// Returns the closest fish that the ray intersects, or null if none
+function raycastFishFromScreenCenter() {
+    return raycastFishFromMouse(window.innerWidth / 2, window.innerHeight / 2);
+}
+
+// Create sci-fi targeting crosshair for third-person mode
+function createTargetLockCrosshair(targetFish) {
+    // Remove existing crosshair if any
+    removeTargetLockCrosshair();
+    
+    const crosshairGroup = new THREE.Group();
+    const baseSize = targetFish.boundingRadius * 1.5;
+    
+    // === OUTER HEXAGONAL RING (sci-fi style) ===
+    const outerRadius = baseSize * 1.2;
+    const outerRingGeometry = new THREE.RingGeometry(outerRadius - 2, outerRadius, 6);
+    const outerRingMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,  // Cyan for sci-fi look
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+    });
+    const outerRing = new THREE.Mesh(outerRingGeometry, outerRingMaterial);
+    crosshairGroup.add(outerRing);
+    
+    // === MIDDLE CIRCULAR RING ===
+    const middleRadius = baseSize * 0.8;
+    const middleRingGeometry = new THREE.RingGeometry(middleRadius - 1.5, middleRadius, 32);
+    const middleRingMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff3366,  // Magenta-red
+        transparent: true,
+        opacity: 0.7,
+        side: THREE.DoubleSide
+    });
+    const middleRing = new THREE.Mesh(middleRingGeometry, middleRingMaterial);
+    crosshairGroup.add(middleRing);
+    
+    // === INNER TARGETING RING ===
+    const innerRadius = baseSize * 0.4;
+    const innerRingGeometry = new THREE.RingGeometry(innerRadius - 1, innerRadius, 32);
+    const innerRingMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,  // Yellow center
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+    });
+    const innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial);
+    crosshairGroup.add(innerRing);
+    
+    // === SCI-FI TARGETING LINES ===
+    const lineLength = baseSize * 1.4;
+    const gapStart = baseSize * 0.2;
+    const gapEnd = baseSize * 0.5;
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+    
+    // Create 4 targeting lines with gaps in center
+    const lineAngles = [0, Math.PI/2, Math.PI, Math.PI * 1.5];
+    lineAngles.forEach(angle => {
+        // Outer segment
+        const outerPoints = [
+            new THREE.Vector3(Math.cos(angle) * gapEnd, Math.sin(angle) * gapEnd, 0),
+            new THREE.Vector3(Math.cos(angle) * lineLength, Math.sin(angle) * lineLength, 0)
+        ];
+        const outerGeometry = new THREE.BufferGeometry().setFromPoints(outerPoints);
+        const outerLine = new THREE.Line(outerGeometry, lineMaterial);
+        crosshairGroup.add(outerLine);
+        
+        // Inner segment (small tick marks)
+        const innerPoints = [
+            new THREE.Vector3(Math.cos(angle) * gapStart * 0.5, Math.sin(angle) * gapStart * 0.5, 0),
+            new THREE.Vector3(Math.cos(angle) * gapStart, Math.sin(angle) * gapStart, 0)
+        ];
+        const innerGeometry = new THREE.BufferGeometry().setFromPoints(innerPoints);
+        const innerLine = new THREE.Line(innerGeometry, new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 }));
+        crosshairGroup.add(innerLine);
+    });
+    
+    // === DIAGONAL CORNER BRACKETS ===
+    const bracketSize = baseSize * 1.0;
+    const bracketMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+    
+    const bracketAngles = [Math.PI/4, 3*Math.PI/4, 5*Math.PI/4, 7*Math.PI/4];
+    bracketAngles.forEach(angle => {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const bracketPoints = [
+            new THREE.Vector3(cos * bracketSize * 0.7, sin * bracketSize * 0.7, 0),
+            new THREE.Vector3(cos * bracketSize, sin * bracketSize, 0),
+            new THREE.Vector3(cos * bracketSize * 0.85 - sin * 0.1 * bracketSize, sin * bracketSize * 0.85 + cos * 0.1 * bracketSize, 0)
+        ];
+        const bracketGeometry = new THREE.BufferGeometry().setFromPoints(bracketPoints);
+        const bracket = new THREE.Line(bracketGeometry, bracketMaterial);
+        crosshairGroup.add(bracket);
+    });
+    
+    crosshairGroup.userData.targetFish = targetFish;
+    crosshairGroup.userData.rotationSpeed = 1;
+    
+    scene.add(crosshairGroup);
+    targetLockState.crosshairGroup = crosshairGroup;
+}
+
+// Remove target lock crosshair
+function removeTargetLockCrosshair() {
+    if (targetLockState.crosshairGroup) {
+        scene.remove(targetLockState.crosshairGroup);
+        // Dispose geometries and materials
+        targetLockState.crosshairGroup.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+        });
+        targetLockState.crosshairGroup = null;
+    }
+}
+
+// Update target lock crosshair position and animation
+function updateTargetLockCrosshair() {
+    if (!targetLockState.crosshairGroup || !targetLockState.targetedFish) return;
+    
+    const targetFish = targetLockState.targetedFish;
+    if (!targetFish.isActive) {
+        // Target fish died - clear targeting
+        clearTargetLock();
+        return;
+    }
+    
+    // Follow the target fish
+    targetLockState.crosshairGroup.position.copy(targetFish.group.position);
+    
+    // Face the camera
+    targetLockState.crosshairGroup.lookAt(camera.position);
+    
+    // SCI-FI ANIMATION: Multiple rotating elements
+    if (targetLockState.crosshairGroup.children[0]) targetLockState.crosshairGroup.children[0].rotation.z += 0.01;
+    if (targetLockState.crosshairGroup.children[1]) targetLockState.crosshairGroup.children[1].rotation.z -= 0.02;
+    if (targetLockState.crosshairGroup.children[2]) targetLockState.crosshairGroup.children[2].rotation.z += 0.03;
+    
+    // Pulse effect on opacity
+    const pulse = Math.sin(Date.now() * 0.006) * 0.15 + 0.85;
+    if (targetLockState.crosshairGroup.children[0] && targetLockState.crosshairGroup.children[0].material) {
+        targetLockState.crosshairGroup.children[0].material.opacity = 0.6 * pulse;
+    }
+}
+
+// Apply highlight effect to fish (cyan glow)
+function applyFishHighlight(fish) {
+    if (!fish || targetLockState.highlightedFish === fish) return;
+    
+    // Remove highlight from previous fish
+    removeFishHighlight();
+    
+    // Apply cyan glow to the fish
+    if (fish.glbLoaded && fish.glbMeshes) {
+        fish.glbMeshes.forEach(mesh => {
+            if (mesh.material && 'emissiveIntensity' in mesh.material) {
+                mesh.userData.originalEmissive = mesh.material.emissive ? mesh.material.emissive.getHex() : 0x000000;
+                mesh.userData.originalEmissiveIntensity = mesh.material.emissiveIntensity;
+                mesh.material.emissive = new THREE.Color(0x00ffff);
+                mesh.material.emissiveIntensity = 0.5;
+            }
+        });
+    } else if (fish.body && fish.body.material && 'emissiveIntensity' in fish.body.material) {
+        fish.body.userData.originalEmissive = fish.body.material.emissive ? fish.body.material.emissive.getHex() : 0x000000;
+        fish.body.userData.originalEmissiveIntensity = fish.body.material.emissiveIntensity;
+        fish.body.material.emissive = new THREE.Color(0x00ffff);
+        fish.body.material.emissiveIntensity = 0.5;
+    }
+    
+    targetLockState.highlightedFish = fish;
+}
+
+// Remove highlight effect from fish
+function removeFishHighlight() {
+    const fish = targetLockState.highlightedFish;
+    if (!fish) return;
+    
+    // Restore original emissive values
+    if (fish.glbLoaded && fish.glbMeshes) {
+        fish.glbMeshes.forEach(mesh => {
+            if (mesh.material && 'emissiveIntensity' in mesh.material && mesh.userData.originalEmissive !== undefined) {
+                mesh.material.emissive = new THREE.Color(mesh.userData.originalEmissive);
+                mesh.material.emissiveIntensity = mesh.userData.originalEmissiveIntensity || 0.1;
+            }
+        });
+    } else if (fish.body && fish.body.material && 'emissiveIntensity' in fish.body.material && fish.body.userData.originalEmissive !== undefined) {
+        fish.body.material.emissive = new THREE.Color(fish.body.userData.originalEmissive);
+        fish.body.material.emissiveIntensity = fish.body.userData.originalEmissiveIntensity || 0.1;
+    }
+    
+    targetLockState.highlightedFish = null;
+}
+
+// Set target lock on a fish
+function setTargetLock(fish) {
+    if (targetLockState.targetedFish === fish) return;
+    
+    targetLockState.targetedFish = fish;
+    
+    if (fish) {
+        createTargetLockCrosshair(fish);
+        applyFishHighlight(fish);
+    }
+}
+
+// Clear target lock
+function clearTargetLock() {
+    removeTargetLockCrosshair();
+    removeFishHighlight();
+    targetLockState.targetedFish = null;
+    targetLockState.lastHoveredFish = null;
+}
+
+// Update target lock system (called from mousemove in third-person mode)
+function updateTargetLockFromMouse(mouseX, mouseY) {
+    // Only active in third-person mode
+    if (gameState.viewMode === 'fps') {
+        clearTargetLock();
+        return;
+    }
+    
+    // Raycast to find fish under cursor
+    const hoveredFish = raycastFishFromMouse(mouseX, mouseY);
+    
+    if (hoveredFish !== targetLockState.lastHoveredFish) {
+        targetLockState.lastHoveredFish = hoveredFish;
+        
+        if (hoveredFish) {
+            setTargetLock(hoveredFish);
+        } else {
+            clearTargetLock();
+        }
+    }
+}
+
+// Helper function to apply FPS recoil (extracted for hitscan system)
+function applyFPSRecoil(weaponKey) {
+    const config = WEAPON_VFX_CONFIG[weaponKey];
+    const recoilStrength = config ? config.recoilStrength : 5;
+    
+    fpsCameraRecoilState.maxPitchOffset = recoilStrength * 0.003;
+    fpsCameraRecoilState.active = true;
+    fpsCameraRecoilState.phase = 'kick';
+    fpsCameraRecoilState.kickStartTime = performance.now();
+    fpsCameraRecoilState.kickDuration = 30 + recoilStrength;
+    fpsCameraRecoilState.returnDuration = 100 + recoilStrength * 4;
+}
+
+// Helper function to apply third-person recoil (extracted for target lock system)
+function applyThirdPersonRecoil(weaponKey, direction) {
+    if (!cannonBarrel) return;
+    
+    const config = WEAPON_VFX_CONFIG[weaponKey];
+    const recoilStrength = config ? config.recoilStrength : 5;
+    
+    barrelRecoilState.originalPosition.copy(cannonBarrel.position);
+    barrelRecoilState.recoilVector.copy(direction).normalize().multiplyScalar(-1);
+    barrelRecoilState.recoilDistance = recoilStrength * 2;
+    barrelRecoilState.active = true;
+    barrelRecoilState.phase = 'kick';
+    barrelRecoilState.kickStartTime = performance.now();
+    barrelRecoilState.kickDuration = 30 + recoilStrength;
+    barrelRecoilState.returnDuration = 80 + recoilStrength * 3;
+}
+
 // Sci-fi base ring state for animation
 // Stores references to the dual-layer ring meshes for rotation/pulse animation
 let cannonBaseRingCore = null;
@@ -9922,8 +10257,10 @@ function getAimDirectionFromMouse(targetX, targetY, outDirection) {
     // - Clamp t to reasonable range to avoid extreme values
     
     let targetDistance;
-    if (rayDir.y > 0.001) {
-        // Ray is pointing upward toward fish plane
+    // FIX: Handle both upward rays (FPS mode, camera below fish plane) 
+    // and downward rays (third-person mode, camera above fish plane)
+    if (Math.abs(rayDir.y) > 0.001) {
+        // Ray has vertical component - can intersect fish plane
         const t = -rayOrigin.y / rayDir.y;
         if (t > 10 && t < 2000) {
             // Valid intersection within reasonable range
@@ -9933,7 +10270,7 @@ function getAimDirectionFromMouse(targetX, targetY, outDirection) {
             targetDistance = 400;
         }
     } else {
-        // Ray is pointing downward or horizontal, use fallback
+        // Ray is nearly horizontal, use fallback
         targetDistance = 400;
     }
     
@@ -9979,8 +10316,9 @@ function getAimDirectionAndTarget(targetX, targetY, outDirection, outTargetPoint
     const resultTarget = outTargetPoint || aimTempVectors.targetPoint;
     
     // Calculate intersection with fish plane (Y=0)
+    // FIX: Handle both upward rays (FPS mode) and downward rays (third-person mode)
     let targetDistance;
-    if (rayDir.y > 0.001) {
+    if (Math.abs(rayDir.y) > 0.001) {
         const t = -rayOrigin.y / rayDir.y;
         if (t > 10 && t < 2000) {
             targetDistance = t;
@@ -14201,6 +14539,98 @@ function fireBullet(targetX, targetY) {
     // Track last weapon used for reward calculation
     gameState.lastWeaponKey = weaponKey;
     
+    // PERFORMANCE: Use temp vector instead of creating new Vector3
+    cannonMuzzle.getWorldPosition(fireBulletTempVectors.muzzlePos);
+    const muzzlePos = fireBulletTempVectors.muzzlePos;
+    
+    // ==================== HITSCAN SYSTEM (FPS MODE) ====================
+    // Like Valorant/CS:GO - crosshair points at fish = instant hit
+    // Visual bullet is purely cosmetic, damage is applied immediately
+    if (gameState.viewMode === 'fps') {
+        // Raycast from camera through screen center to find fish
+        const hitFish = raycastFishFromScreenCenter();
+        
+        if (hitFish && hitFish.isActive) {
+            // INSTANT HIT: Apply damage immediately (hitscan)
+            const killed = hitFish.takeDamage(weapon.damage, weaponKey);
+            
+            // Get fish position for visual bullet trajectory
+            const fishPos = hitFish.group.position.clone();
+            
+            // Calculate direction from muzzle to fish for visual bullet
+            const visualDirection = new THREE.Vector3().subVectors(fishPos, muzzlePos).normalize();
+            
+            // Spawn visual bullet (purely cosmetic - damage already applied)
+            if (weapon.type === 'spread') {
+                const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
+                spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+                fireBulletTempVectors.leftDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, spreadAngle);
+                spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey);
+                fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
+                spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
+            } else if (weapon.type === 'aoe') {
+                spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, fishPos);
+            } else {
+                spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+            }
+            
+            // Spawn hit effect at fish position
+            spawnHitEffect(fishPos, weaponKey);
+            
+            // Muzzle flash
+            spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
+            
+            // Apply recoil
+            applyFPSRecoil(weaponKey);
+            
+            return true;
+        }
+        
+        // No fish hit - fire toward crosshair target point (normal trajectory)
+        // Fall through to normal aiming logic below
+    }
+    
+    // ==================== TARGET LOCK SYSTEM (THIRD-PERSON MODE) ====================
+    // If a fish is targeted (hovered), guarantee hit on that fish
+    if (gameState.viewMode !== 'fps' && targetLockState.targetedFish && targetLockState.targetedFish.isActive) {
+        const targetFish = targetLockState.targetedFish;
+        
+        // INSTANT HIT: Apply damage immediately (guaranteed hit on locked target)
+        const killed = targetFish.takeDamage(weapon.damage, weaponKey);
+        
+        // Get fish position for visual bullet trajectory
+        const fishPos = targetFish.group.position.clone();
+        
+        // Calculate direction from muzzle to fish for visual bullet
+        const visualDirection = new THREE.Vector3().subVectors(fishPos, muzzlePos).normalize();
+        
+        // Spawn visual bullet (purely cosmetic - damage already applied)
+        if (weapon.type === 'spread') {
+            const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+            fireBulletTempVectors.leftDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, spreadAngle);
+            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey);
+            fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
+            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
+        } else if (weapon.type === 'aoe') {
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, fishPos);
+        } else {
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+        }
+        
+        // Spawn hit effect at fish position
+        spawnHitEffect(fishPos, weaponKey);
+        
+        // Muzzle flash
+        spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
+        
+        // Apply third-person recoil
+        applyThirdPersonRecoil(weaponKey, visualDirection);
+        
+        return true;
+    }
+    
+    // ==================== NORMAL SHOOTING (No target lock / FPS miss) ====================
     // ACCURATE AIMING: Use getAimDirectionAndTarget to get both direction and target point
     // This ensures bullets hit exactly where the crosshair points
     // FPS MODE: Fire toward screen center (where crosshair is)
@@ -14217,10 +14647,6 @@ function fireBullet(targetX, targetY) {
     const aimResult = getAimDirectionAndTarget(aimX, aimY, fireBulletTempVectors.multiplayerDir, fireBulletTempVectors.targetPoint);
     const direction = aimResult.direction;
     const targetPoint = aimResult.targetPoint;
-    
-    // PERFORMANCE: Use temp vector instead of creating new Vector3
-    cannonMuzzle.getWorldPosition(fireBulletTempVectors.muzzlePos);
-    const muzzlePos = fireBulletTempVectors.muzzlePos;
     
     // Fire based on weapon type
     if (weapon.type === 'spread') {
@@ -15126,6 +15552,10 @@ function setupEventListeners() {
         // This prevents excessive object allocations and garbage collection pressure
         aimCannonThrottled(e.clientX, e.clientY);
         
+        // TARGET LOCK SYSTEM: Update fish hover detection for third-person mode
+        // This enables the sci-fi crosshair and fish highlight when hovering over fish
+        updateTargetLockFromMouse(e.clientX, e.clientY);
+        
         const crosshair = document.getElementById('crosshair');
         if (crosshair) {
             const compensatedPos = getParallaxCompensatedCrosshairPosition(e.clientX, e.clientY);
@@ -16014,6 +16444,9 @@ function animate() {
     
     // Update decorative cannon rings animation
     updateStaticCannonRings(currentTime / 1000);
+    
+    // Update target lock crosshair animation (third-person mode)
+    updateTargetLockCrosshair();
     
     // Update floating underwater particles for dynamic atmosphere
     updateUnderwaterParticles(deltaTime);

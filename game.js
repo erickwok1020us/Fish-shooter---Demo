@@ -14598,25 +14598,24 @@ function fireBullet(targetX, targetY) {
         }
         
         // Use the FAR intersection point (tMax) as target - where ray exits fish area
-        // This ensures bullet travels through entire fish area along crosshair line
+        // This is the "zero distance" where bullet converges with crosshair
         const targetDistance = Math.max(tMax, 100); // At least 100 units
         const fpsTargetPoint = fireBulletTempVectors.targetPoint
             .copy(cameraRayOrigin)
             .addScaledVector(cameraRayDir, targetDistance);
         
-        // Calculate bullet spawn point ON the camera ray (at muzzle distance)
-        // Use projection to find closest point on ray to muzzle
-        const muzzleToCamera = fireBulletTempVectors.fpsVisualDirection
-            .copy(muzzlePos).sub(cameraRayOrigin);
-        const projectionDistance = muzzleToCamera.dot(cameraRayDir);
+        // USER'S APPROACH: Bullet spawns at MUZZLE, travels toward crosshair target point
+        // This creates a "zero distance" effect like real gun sights:
+        // - Bullet starts at muzzle (visible to player)
+        // - Bullet converges with crosshair at fish area boundary
+        // - At the fish area boundary distance, bullet hits exactly where crosshair points
         const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
-            .copy(cameraRayOrigin)
-            .addScaledVector(cameraRayDir, Math.max(projectionDistance, 10));
+            .copy(muzzlePos);
         
-        // Calculate direction from spawn point to target point
-        // This ensures bullet travels along crosshair line to fish area boundary
+        // Calculate direction from muzzle to target point on crosshair line
+        // This ensures bullet converges with crosshair at fish area boundary
         const visualDirection = fireBulletTempVectors.fpsVisualDirection
-            .copy(fpsTargetPoint).sub(bulletSpawnPoint).normalize();
+            .copy(fpsTargetPoint).sub(muzzlePos).normalize();
         
         if (hitFish && hitFish.isActive) {
             // INSTANT HIT: Apply damage immediately (hitscan)

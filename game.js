@@ -8,7 +8,7 @@
 const MODULE_TEST_CONFIG = {
     enabled: true,
     // Your R2 bucket base URL - REPLACE THIS WITH YOUR OWN R2 URL
-    r2BaseUrl: 'YOUR_R2_BUCKET_URL/',  // Example: 'https://pub-xxxxx.r2.dev/'
+    r2BaseUrl: 'https://pub-7ce92369324549518cd89a6712c6b6e4.r2.dev/',
     // Custom model URLs (can be set via UI or directly here)
     customWeaponUrl: null,      // Custom weapon/cannon GLB URL
     customBulletUrl: null,      // Custom bullet GLB URL
@@ -23,8 +23,8 @@ const MODULE_TEST_CONFIG = {
     fishScale: 1.0,
     coinScale: 1.0,
     mapScale: 1.0,
-    // Use R2 for assets (set to false for fully offline mode)
-    useR2: false
+    // Use R2 for assets (set to true to load from R2 cloud storage)
+    useR2: true
 };
 
 // ==================== SPHERICAL PANORAMA BACKGROUND SYSTEM ====================

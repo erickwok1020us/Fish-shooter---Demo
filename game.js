@@ -2246,7 +2246,10 @@ const fireBulletTempVectors = {
     multiplayerMuzzlePos: new THREE.Vector3(),
     multiplayerDir: new THREE.Vector3(),
     // ACCURATE AIMING: Temp vectors for target point calculation
-    targetPoint: new THREE.Vector3()
+    targetPoint: new THREE.Vector3(),
+    // CS:GO STYLE: Temp vectors for FPS miss case (camera ray to far distance)
+    fpsFarTargetPoint: new THREE.Vector3(),
+    fpsVisualDirection: new THREE.Vector3()
 };
 
 // ACCURATE AIMING: Constants for parabolic trajectory (8x weapon)
@@ -14586,8 +14589,49 @@ function fireBullet(targetX, targetY) {
             return true;
         }
         
-        // No fish hit - fire toward crosshair target point (normal trajectory)
-        // Fall through to normal aiming logic below
+        // ==================== CS:GO STYLE: FPS MISS CASE ====================
+        // No fish hit - fire along camera ray direction to far distance
+        // This ensures NO parallax - bullet goes exactly where crosshair points
+        const FAR_DISTANCE = 3000; // Far enough for deep underwater feel (not fish tank)
+        
+        // Get camera ray direction (through screen center)
+        raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+        const cameraRayDir = raycaster.ray.direction;
+        const cameraRayOrigin = raycaster.ray.origin;
+        
+        // PERFORMANCE: Use temp vectors instead of creating new Vector3
+        // Calculate target point along camera ray at far distance
+        const farTargetPoint = fireBulletTempVectors.fpsFarTargetPoint
+            .copy(cameraRayOrigin)
+            .addScaledVector(cameraRayDir, FAR_DISTANCE);
+        
+        // Calculate direction from muzzle to far target point
+        // This ensures visual bullet ends at the same point the camera ray points to
+        const visualDirection = fireBulletTempVectors.fpsVisualDirection
+            .subVectors(farTargetPoint, muzzlePos)
+            .normalize();
+        
+        // Spawn visual bullet toward the far target point
+        if (weapon.type === 'spread') {
+            const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+            fireBulletTempVectors.leftDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, spreadAngle);
+            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey);
+            fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
+            spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
+        } else if (weapon.type === 'aoe') {
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, farTargetPoint);
+        } else {
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
+        }
+        
+        // Muzzle flash
+        spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
+        
+        // Apply recoil
+        applyFPSRecoil(weaponKey);
+        
+        return true;
     }
     
     // ==================== TARGET LOCK SYSTEM (THIRD-PERSON MODE) ====================

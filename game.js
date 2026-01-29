@@ -14590,28 +14590,21 @@ function fireBullet(targetX, targetY) {
         }
         
         // ==================== CS:GO STYLE: FPS MISS CASE ====================
-        // No fish hit - fire along camera ray direction to far distance
-        // This ensures NO parallax - bullet goes exactly where crosshair points
-        const FAR_DISTANCE = 3000; // Far enough for deep underwater feel (not fish tank)
+        // No fish hit - fire along camera ray direction
+        // CS:GO FIX: Use camera ray DIRECTION directly, not muzzle-to-farpoint
+        // This ensures bullet visually travels toward crosshair at ALL distances
+        // (Previous approach only converged at 3000 units, appearing below crosshair at closer ranges)
         
         // Get camera ray direction (through screen center)
         raycaster.setFromCamera({ x: 0, y: 0 }, camera);
         const cameraRayDir = raycaster.ray.direction;
-        const cameraRayOrigin = raycaster.ray.origin;
         
-        // PERFORMANCE: Use temp vectors instead of creating new Vector3
-        // Calculate target point along camera ray at far distance
-        const farTargetPoint = fireBulletTempVectors.fpsFarTargetPoint
-            .copy(cameraRayOrigin)
-            .addScaledVector(cameraRayDir, FAR_DISTANCE);
-        
-        // Calculate direction from muzzle to far target point
-        // This ensures visual bullet ends at the same point the camera ray points to
+        // CS:GO STYLE: Bullet travels in the SAME direction as camera ray
+        // This makes bullet appear to go toward crosshair immediately, not just at far distance
         const visualDirection = fireBulletTempVectors.fpsVisualDirection
-            .subVectors(farTargetPoint, muzzlePos)
-            .normalize();
+            .copy(cameraRayDir);
         
-        // Spawn visual bullet toward the far target point
+        // Spawn visual bullet along camera ray direction
         if (weapon.type === 'spread') {
             const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
             spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
@@ -14620,7 +14613,11 @@ function fireBullet(targetX, targetY) {
             fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
             spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
         } else if (weapon.type === 'aoe') {
-            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, farTargetPoint);
+            // AOE weapon: calculate target point along camera ray for parabolic trajectory
+            const aoeTargetPoint = fireBulletTempVectors.fpsFarTargetPoint
+                .copy(raycaster.ray.origin)
+                .addScaledVector(cameraRayDir, 500); // AOE lands at reasonable distance
+            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, aoeTargetPoint);
         } else {
             spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey);
         }

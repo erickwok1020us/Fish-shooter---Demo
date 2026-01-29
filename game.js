@@ -788,9 +788,9 @@ const CONFIG = {
             convergenceDistance: 750  // Halved from 1500 for better close-range targeting
         },
         '8x': { 
-            multiplier: 8, cost: 8, speed: 600, 
+            multiplier: 8, cost: 8, speed: 1200, 
             damage: 250, damageEdge: 100, shotsPerSecond: 2.5, // cooldown = 0.4s
-            type: 'aoe', aoeRadius: 150,
+            type: 'laser', aoeRadius: 150,
             color: 0xff4444, size: 14,
             cannonColor: 0xff2222, cannonEmissive: 0xcc0000,
             convergenceDistance: 1500  // Original distance for 8x weapon
@@ -6781,6 +6781,9 @@ async function spawnWeaponHitEffect(weaponKey, hitPos, hitFish, bulletDirection)
     const config = WEAPON_VFX_CONFIG[weaponKey];
     const glbConfig = WEAPON_GLB_CONFIG.weapons[weaponKey];
     if (!config) return;
+    
+    // Skip 8x hit effect (laser weapon - user requested no hit effect)
+    if (weaponKey === '8x') return;
     
     // Try to spawn GLB hit effect first
     if (weaponGLBState.enabled && glbConfig) {
@@ -14176,7 +14179,7 @@ class Bullet {
         } else {
             // SYNC BULLET: Calculate dynamic speed based on target distance
             // Bullet should reach target in BULLET_TRAVEL_TIME seconds for visual sync with hit
-            const BULLET_TRAVEL_TIME = 0.12; // 120ms - fast but visible
+            const BULLET_TRAVEL_TIME = 0.08; // 80ms - very fast to sync with instant damage
             let bulletSpeed = weapon.speed; // Default speed
             
             if (targetDistance && targetDistance > 0) {
@@ -14653,15 +14656,13 @@ function fireBullet(targetX, targetY) {
                 spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.leftDir, weaponKey, null, distanceToFish);
                 fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
                 spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey, null, distanceToFish);
-            } else if (weapon.type === 'aoe') {
-                // AOE: Use fish area target point for parabolic trajectory (speed handled by parabolic calc)
-                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fpsTargetPoint);
             } else {
+                // All other weapons (projectile, chain, laser): straight line bullet
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, null, distanceToFish);
             }
             
-            // Spawn hit effect at fish position (visual feedback that fish was hit)
-            spawnHitEffect(fishPos, weaponKey);
+            // NOTE: Hit effect is handled by bullet collision in Bullet.update()
+            // The bullet will collide with the fish and trigger hit effect naturally
             
             // Muzzle flash (still at muzzle for visual effect)
             spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
@@ -14682,10 +14683,8 @@ function fireBullet(targetX, targetY) {
             spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.leftDir, weaponKey);
             fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
             spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey);
-        } else if (weapon.type === 'aoe') {
-            // AOE weapon: use fish area target point for parabolic trajectory
-            spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fpsTargetPoint);
         } else {
+            // All other weapons (projectile, chain, laser): straight line bullet
             spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
         }
         
@@ -14703,9 +14702,6 @@ function fireBullet(targetX, targetY) {
     if (gameState.viewMode !== 'fps' && targetLockState.targetedFish && targetLockState.targetedFish.isActive) {
         const targetFish = targetLockState.targetedFish;
         
-        // INSTANT HIT: Apply damage immediately (guaranteed hit on locked target)
-        const killed = targetFish.takeDamage(weapon.damage, weaponKey);
-        
         // Get fish position for visual bullet trajectory
         const fishPos = targetFish.group.position.clone();
         
@@ -14715,7 +14711,7 @@ function fireBullet(targetX, targetY) {
         // SYNC BULLET: Calculate distance from muzzle to fish for dynamic speed
         const distanceToFish = muzzlePos.distanceTo(fishPos);
         
-        // Spawn visual bullet (purely cosmetic - damage already applied)
+        // Spawn visual bullet toward targeted fish
         if (weapon.type === 'spread') {
             const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
             spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, null, distanceToFish);
@@ -14723,20 +14719,20 @@ function fireBullet(targetX, targetY) {
             spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.leftDir, weaponKey, null, distanceToFish);
             fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
             spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey, null, distanceToFish);
-        } else if (weapon.type === 'aoe') {
-            spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, fishPos);
         } else {
+            // All other weapons (projectile, chain, laser): straight line bullet with dynamic speed
             spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, null, distanceToFish);
         }
         
-        // Spawn hit effect at fish position
-        spawnHitEffect(fishPos, weaponKey);
-        
-        // Muzzle flash
+        // Muzzle flash (immediate)
         spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
         
-        // Apply third-person recoil
+        // Apply third-person recoil (immediate)
         applyThirdPersonRecoil(weaponKey, visualDirection);
+        
+        // NOTE: Damage and hit effects are handled by bullet collision in Bullet.update()
+        // The bullet will collide with the fish and apply damage + hit effect naturally
+        // This ensures visual sync: bullet reaches fish -> damage applied -> hit effect shown
         
         return true;
     }
@@ -14776,12 +14772,9 @@ function fireBullet(targetX, targetY) {
         fireBulletTempVectors.rightDir.copy(direction).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
         spawnBulletFromDirection(muzzlePos, fireBulletTempVectors.rightDir, weaponKey);
         
-    } else if (weapon.type === 'aoe') {
-        // ACCURATE AIMING: 8x weapon uses parabolic trajectory with compensated velocity
-        // Pass target point so bullet can calculate the correct initial velocity
-        spawnBulletFromDirection(muzzlePos, direction, weaponKey, targetPoint);
     } else {
-        // Single bullet for projectile and chain types (1x, 5x)
+        // Single bullet for projectile, chain, and laser types (1x, 5x, 8x)
+        // Laser (8x) fires straight line like other weapons
         spawnBulletFromDirection(muzzlePos, direction, weaponKey);
     }
     

@@ -14656,15 +14656,13 @@ function fireBullet(targetX, targetY) {
                 spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.leftDir, weaponKey, null, distanceToFish);
                 fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
                 spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey, null, distanceToFish);
-            } else if (weapon.type === 'aoe') {
-                // AOE: Use fish area target point for parabolic trajectory (speed handled by parabolic calc)
-                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fpsTargetPoint);
             } else {
+                // All other weapons (projectile, chain, laser): straight line bullet
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, null, distanceToFish);
             }
             
-            // Spawn hit effect at fish position (visual feedback that fish was hit)
-            spawnWeaponHitEffect(weaponKey, fishPos, hitFish, visualDirection);
+            // NOTE: Hit effect is handled by bullet collision in Bullet.update()
+            // The bullet will collide with the fish and trigger hit effect naturally
             
             // Muzzle flash (still at muzzle for visual effect)
             spawnMuzzleFlash(weaponKey, muzzlePos, visualDirection);
@@ -14713,11 +14711,7 @@ function fireBullet(targetX, targetY) {
         // SYNC BULLET: Calculate distance from muzzle to fish for dynamic speed
         const distanceToFish = muzzlePos.distanceTo(fishPos);
         
-        // Calculate bullet travel time for delayed damage (sync visual with damage)
-        const BULLET_TRAVEL_TIME = 0.08; // 80ms - matches Bullet.fire() travel time
-        const delayMs = BULLET_TRAVEL_TIME * 1000; // Convert to milliseconds
-        
-        // Spawn visual bullet FIRST (before damage)
+        // Spawn visual bullet toward targeted fish
         if (weapon.type === 'spread') {
             const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
             spawnBulletFromDirection(muzzlePos, visualDirection, weaponKey, null, distanceToFish);
@@ -14736,22 +14730,9 @@ function fireBullet(targetX, targetY) {
         // Apply third-person recoil (immediate)
         applyThirdPersonRecoil(weaponKey, visualDirection);
         
-        // DELAYED DAMAGE: Apply damage when bullet reaches fish (visual sync)
-        // Store references for closure
-        const targetFishRef = targetFish;
-        const fishPosRef = fishPos.clone();
-        const weaponKeyRef = weaponKey;
-        const weaponDamage = weapon.damage;
-        
-        setTimeout(() => {
-            // Check if fish is still valid (not already dead or despawned)
-            if (targetFishRef && targetFishRef.isActive) {
-                // Apply damage when bullet reaches
-                targetFishRef.takeDamage(weaponDamage, weaponKeyRef);
-                // Spawn hit effect at fish position
-                spawnWeaponHitEffect(weaponKeyRef, fishPosRef, targetFishRef, visualDirection);
-            }
-        }, delayMs);
+        // NOTE: Damage and hit effects are handled by bullet collision in Bullet.update()
+        // The bullet will collide with the fish and apply damage + hit effect naturally
+        // This ensures visual sync: bullet reaches fish -> damage applied -> hit effect shown
         
         return true;
     }

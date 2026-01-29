@@ -14553,6 +14553,71 @@ function fireBullet(targetX, targetY) {
         // Raycast from camera through screen center to find fish
         const hitFish = raycastFishFromScreenCenter();
         
+        // Get camera ray (through screen center = crosshair position)
+        raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+        const cameraRayDir = raycaster.ray.direction;
+        const cameraRayOrigin = raycaster.ray.origin;
+        
+        // FISH AREA BOUNDARY: Calculate where camera ray intersects fish area box
+        // This ensures bullet target is within the fish swimming area
+        // Fish area: X[-600,600], Y[-250,250], Z[-300,300] (aquarium minus margins)
+        const fishAreaMinX = -CONFIG.aquarium.width / 2 + CONFIG.fishArena.marginX;
+        const fishAreaMaxX = CONFIG.aquarium.width / 2 - CONFIG.fishArena.marginX;
+        const fishAreaMinY = CONFIG.aquarium.floorY + CONFIG.fishArena.marginY;
+        const fishAreaMaxY = CONFIG.aquarium.floorY + CONFIG.aquarium.height - CONFIG.fishArena.marginY;
+        const fishAreaMinZ = -CONFIG.aquarium.depth / 2 + CONFIG.fishArena.marginZ;
+        const fishAreaMaxZ = CONFIG.aquarium.depth / 2 - CONFIG.fishArena.marginZ;
+        
+        // Ray-box intersection: find where camera ray hits fish area boundary
+        // This gives us the exact point on the crosshair line within fish area
+        let tMin = 0;
+        let tMax = 3000; // Max distance (far enough to cover entire aquarium)
+        
+        // X axis intersection
+        if (Math.abs(cameraRayDir.x) > 0.0001) {
+            const t1 = (fishAreaMinX - cameraRayOrigin.x) / cameraRayDir.x;
+            const t2 = (fishAreaMaxX - cameraRayOrigin.x) / cameraRayDir.x;
+            tMin = Math.max(tMin, Math.min(t1, t2));
+            tMax = Math.min(tMax, Math.max(t1, t2));
+        }
+        
+        // Y axis intersection
+        if (Math.abs(cameraRayDir.y) > 0.0001) {
+            const t1 = (fishAreaMinY - cameraRayOrigin.y) / cameraRayDir.y;
+            const t2 = (fishAreaMaxY - cameraRayOrigin.y) / cameraRayDir.y;
+            tMin = Math.max(tMin, Math.min(t1, t2));
+            tMax = Math.min(tMax, Math.max(t1, t2));
+        }
+        
+        // Z axis intersection
+        if (Math.abs(cameraRayDir.z) > 0.0001) {
+            const t1 = (fishAreaMinZ - cameraRayOrigin.z) / cameraRayDir.z;
+            const t2 = (fishAreaMaxZ - cameraRayOrigin.z) / cameraRayDir.z;
+            tMin = Math.max(tMin, Math.min(t1, t2));
+            tMax = Math.min(tMax, Math.max(t1, t2));
+        }
+        
+        // Use the FAR intersection point (tMax) as target - where ray exits fish area
+        // This ensures bullet travels through entire fish area along crosshair line
+        const targetDistance = Math.max(tMax, 100); // At least 100 units
+        const fpsTargetPoint = fireBulletTempVectors.targetPoint
+            .copy(cameraRayOrigin)
+            .addScaledVector(cameraRayDir, targetDistance);
+        
+        // Calculate bullet spawn point ON the camera ray (at muzzle distance)
+        // Use projection to find closest point on ray to muzzle
+        const muzzleToCamera = fireBulletTempVectors.fpsVisualDirection
+            .copy(muzzlePos).sub(cameraRayOrigin);
+        const projectionDistance = muzzleToCamera.dot(cameraRayDir);
+        const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
+            .copy(cameraRayOrigin)
+            .addScaledVector(cameraRayDir, Math.max(projectionDistance, 10));
+        
+        // Calculate direction from spawn point to target point
+        // This ensures bullet travels along crosshair line to fish area boundary
+        const visualDirection = fireBulletTempVectors.fpsVisualDirection
+            .copy(fpsTargetPoint).sub(bulletSpawnPoint).normalize();
+        
         if (hitFish && hitFish.isActive) {
             // INSTANT HIT: Apply damage immediately (hitscan)
             const killed = hitFish.takeDamage(weapon.damage, weaponKey);
@@ -14560,25 +14625,7 @@ function fireBullet(targetX, targetY) {
             // Get fish position for hit effect
             const fishPos = hitFish.group.position.clone();
             
-            // CS:GO STYLE FIX: Bullet travels in CAMERA RAY DIRECTION, not toward fish center
-            // ROOT CAUSE: Fish center may not be exactly on camera ray (raycast hits bounding sphere edge)
-            // If bullet travels toward fish center, it deviates from crosshair line
-            // Solution: Bullet always travels along camera ray direction for zero parallax
-            raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-            const cameraRayDir = raycaster.ray.direction;
-            const cameraRayOrigin = raycaster.ray.origin;
-            const distanceToMuzzle = muzzlePos.distanceTo(cameraRayOrigin);
-            const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
-                .copy(cameraRayOrigin)
-                .addScaledVector(cameraRayDir, distanceToMuzzle);
-            
-            // USE CAMERA RAY DIRECTION - not direction to fish center!
-            // This ensures bullet stays on crosshair line at ALL distances
-            const visualDirection = fireBulletTempVectors.fpsVisualDirection
-                .copy(cameraRayDir);
-            
-            // Spawn visual bullet FROM camera ray line, traveling IN camera ray direction
-            // (purely cosmetic - damage already applied, hit effect shows where fish was hit)
+            // Spawn visual bullet traveling along crosshair line
             if (weapon.type === 'spread') {
                 const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
@@ -14587,11 +14634,8 @@ function fireBullet(targetX, targetY) {
                 fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
                 spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey);
             } else if (weapon.type === 'aoe') {
-                // AOE: Calculate target point along camera ray for parabolic trajectory
-                const aoeTargetPoint = fireBulletTempVectors.targetPoint
-                    .copy(cameraRayOrigin)
-                    .addScaledVector(cameraRayDir, 500);
-                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, aoeTargetPoint);
+                // AOE: Use fish area target point for parabolic trajectory
+                spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fpsTargetPoint);
             } else {
                 spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
             }
@@ -14608,29 +14652,9 @@ function fireBullet(targetX, targetY) {
             return true;
         }
         
-        // ==================== CS:GO STYLE: FPS MISS CASE ====================
-        // No fish hit - fire along camera ray
-        // TRUE CS:GO FIX: Spawn bullet ON the camera ray line, not at muzzle
-        // This ensures bullet travels exactly where crosshair points with ZERO offset
-        
-        // Get camera ray (through screen center)
-        raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-        const cameraRayDir = raycaster.ray.direction;
-        const cameraRayOrigin = raycaster.ray.origin;
-        
-        // Calculate spawn point ON the camera ray
-        // Use the distance from camera to muzzle to determine how far along the ray to spawn
-        const distanceToMuzzle = muzzlePos.distanceTo(cameraRayOrigin);
-        const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
-            .copy(cameraRayOrigin)
-            .addScaledVector(cameraRayDir, distanceToMuzzle);
-        
-        // Bullet direction is the camera ray direction
-        const visualDirection = fireBulletTempVectors.fpsVisualDirection
-            .copy(cameraRayDir);
-        
-        // Spawn visual bullet FROM the camera ray line (not muzzle)
-        // This ensures bullet is ON the crosshair line, not parallel to it
+        // ==================== FPS MISS CASE ====================
+        // No fish hit - fire along camera ray to fish area boundary
+        // Spawn visual bullet FROM the camera ray line toward target point
         if (weapon.type === 'spread') {
             const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
             spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
@@ -14639,11 +14663,8 @@ function fireBullet(targetX, targetY) {
             fireBulletTempVectors.rightDir.copy(visualDirection).applyAxisAngle(fireBulletTempVectors.yAxis, -spreadAngle);
             spawnBulletFromDirection(bulletSpawnPoint, fireBulletTempVectors.rightDir, weaponKey);
         } else if (weapon.type === 'aoe') {
-            // AOE weapon: calculate target point along camera ray for parabolic trajectory
-            const aoeTargetPoint = fireBulletTempVectors.targetPoint
-                .copy(cameraRayOrigin)
-                .addScaledVector(cameraRayDir, 500); // AOE lands at reasonable distance
-            spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, aoeTargetPoint);
+            // AOE weapon: use fish area target point for parabolic trajectory
+            spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey, fpsTargetPoint);
         } else {
             spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);
         }

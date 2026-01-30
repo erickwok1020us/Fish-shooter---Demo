@@ -14622,21 +14622,33 @@ function fireBullet(targetX, targetY) {
             .copy(cameraRayOrigin)
             .addScaledVector(cameraRayDir, targetDistance);
         
-        // CS:GO/VALORANT STYLE: Bullet spawns ON camera ray, travels along camera ray
-        // The gun model and muzzle flash are purely cosmetic - bullet comes from crosshair
-        // This eliminates parallax because bullet is always on the crosshair line
-        //
-        // Spawn bullet at a point on camera ray that's in front of the weapon
-        // We use a fixed distance that puts the bullet visually near the crosshair
-        const BULLET_SPAWN_DISTANCE = 50; // Close to camera but visible
-        const bulletSpawnPoint = fireBulletTempVectors.fpsFarTargetPoint
-            .copy(cameraRayOrigin)
-            .addScaledVector(cameraRayDir, BULLET_SPAWN_DISTANCE);
+        // AIM CONVERGENCE SYSTEM: Bullet spawns from muzzle, converges with crosshair at 30 units
+        // This eliminates parallax by angling the bullet to meet the camera center-line
+        // at a very short distance (virtually "point blank")
+        const AIM_CONVERGENCE_DIST = 30; // World units - extremely close range
         
-        // Bullet direction is EXACTLY the camera ray direction
-        // This ensures bullet stays on crosshair line throughout its flight
+        // Calculate convergence target point on camera ray
+        // IF raycast hits fish -> use hit point as target
+        // IF raycast misses -> use virtual point at convergence distance
+        let convergenceTarget;
+        if (hitFish && hitFish.isActive) {
+            // Use exact hit point on fish
+            convergenceTarget = hitFish.group.position.clone();
+        } else {
+            // Calculate virtual target: CameraPos + (CameraForwardDir * 30)
+            convergenceTarget = fireBulletTempVectors.fpsFarTargetPoint
+                .copy(cameraRayOrigin)
+                .addScaledVector(cameraRayDir, AIM_CONVERGENCE_DIST);
+        }
+        
+        // Bullet spawns from gun muzzle (not camera ray)
+        const bulletSpawnPoint = muzzlePos;
+        
+        // Calculate launch direction: (TargetPos - MuzzlePosition).normalize()
+        // This angles the bullet upward/inward to pass through crosshair at convergence distance
         const visualDirection = fireBulletTempVectors.fpsVisualDirection
-            .copy(cameraRayDir);
+            .subVectors(convergenceTarget, muzzlePos)
+            .normalize();
         
         if (hitFish && hitFish.isActive) {
             // INSTANT HIT: Apply damage immediately (hitscan)
@@ -14674,8 +14686,8 @@ function fireBullet(targetX, targetY) {
         }
         
         // ==================== FPS MISS CASE ====================
-        // No fish hit - fire along camera ray to fish area boundary
-        // Spawn visual bullet FROM the camera ray line toward target point
+        // No fish hit - fire from muzzle toward convergence point (30 units on camera ray)
+        // Bullet will pass through crosshair at convergence distance
         if (weapon.type === 'spread') {
             const spreadAngle = weapon.spreadAngle * (Math.PI / 180);
             spawnBulletFromDirection(bulletSpawnPoint, visualDirection, weaponKey);

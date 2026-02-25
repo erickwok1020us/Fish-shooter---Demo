@@ -15479,23 +15479,198 @@ function updateCrosshairForWeapon(weaponKey) {
     }
 }
 
+// ==================== REWARD POPUP: 3D Sprite Near Balance HUD ====================
+// Reward numbers spawn as 3D sprites near the Balance HUD (top-left),
+// with randomized offset to avoid overlap, then animate "Float & Absorb"
+// toward the balance value display before dissolving.
+
+function _createRewardTextCanvas(amount) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    
+    // Clear
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Text styling - bold glowing green to match Balance HUD
+    const text = `+${Math.round(amount)}`;
+    ctx.font = 'bold 64px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Outer glow
+    ctx.shadowColor = 'rgba(0, 255, 127, 0.8)';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#00ff7f';
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    
+    // Inner bright core
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = '#aaffcc';
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    
+    return canvas;
+}
+
+function _getBalanceHUDWorldPosition(depthFromCamera) {
+    // Get the Balance HUD element's screen position
+    const balanceEl = document.getElementById('balance-display');
+    if (!balanceEl || !camera) return new THREE.Vector3(0, 0, 0);
+    
+    const rect = balanceEl.getBoundingClientRect();
+    // Target the center of the balance display
+    const screenX = rect.left + rect.width / 2;
+    const screenY = rect.top + rect.height / 2;
+    
+    // Convert screen coords to NDC (-1 to 1)
+    const ndcX = (screenX / window.innerWidth) * 2 - 1;
+    const ndcY = -(screenY / window.innerHeight) * 2 + 1;
+    
+    // Unproject at a depth near the camera
+    const worldPos = new THREE.Vector3(ndcX, ndcY, 0.95);
+    worldPos.unproject(camera);
+    
+    // Place at a fixed depth in front of camera
+    const dir = worldPos.sub(camera.position).normalize();
+    return camera.position.clone().add(dir.multiplyScalar(depthFromCamera));
+}
+
 function showRewardPopup(position, amount) {
-    // Project 3D position to screen
-    const vector = position.clone();
-    vector.project(camera);
+    if (!scene || !camera || !particleGroup) return;
     
-    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+    // Depth from camera where the sprite lives (close enough to appear near HUD)
+    const HUD_DEPTH = 50;
     
-    const popup = document.createElement('div');
-    popup.className = 'reward-popup';
-    // Issue #6: Show whole numbers only, no decimals
-    popup.textContent = `+${Math.round(amount)}`;
-    popup.style.left = x + 'px';
-    popup.style.top = y + 'px';
-    document.getElementById('ui-overlay').appendChild(popup);
+    // Get the 3D position near the Balance HUD
+    const hudWorldPos = _getBalanceHUDWorldPosition(HUD_DEPTH);
     
-    setTimeout(() => popup.remove(), 1500);
+    // Randomized offset to avoid overlap (small radius in world units)
+    const offsetX = (Math.random() - 0.5) * 8;
+    const offsetY = (Math.random() - 0.5) * 5;
+    const spawnPos = hudWorldPos.clone();
+    // Apply offset in camera-local space (right and up vectors)
+    const camRight = new THREE.Vector3();
+    const camUp = new THREE.Vector3();
+    camera.matrixWorld.extractBasis(camRight, camUp, new THREE.Vector3());
+    spawnPos.add(camRight.multiplyScalar(offsetX));
+    spawnPos.add(camUp.multiplyScalar(offsetY));
+    
+    // Get the target position (where balance value text is)
+    const balanceValueEl = document.getElementById('balance-value');
+    let targetWorldPos;
+    if (balanceValueEl) {
+        const targetRect = balanceValueEl.getBoundingClientRect();
+        const tNdcX = (targetRect.left / window.innerWidth) * 2 - 1;
+        const tNdcY = -(targetRect.top / window.innerHeight) * 2 + 1;
+        const tWorld = new THREE.Vector3(tNdcX, tNdcY, 0.95).unproject(camera);
+        const tDir = tWorld.sub(camera.position).normalize();
+        targetWorldPos = camera.position.clone().add(tDir.multiplyScalar(HUD_DEPTH));
+    } else {
+        targetWorldPos = hudWorldPos.clone();
+    }
+    
+    // Create canvas texture with reward text
+    const canvas = _createRewardTextCanvas(amount);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    
+    // Create 3D Sprite
+    const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 1.0,
+        depthTest: false,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.position.copy(spawnPos);
+    sprite.scale.set(12, 6, 1); // Aspect ratio matches 256x128 canvas
+    sprite.renderOrder = 9999; // Render on top of everything
+    particleGroup.add(sprite);
+    
+    // "Float & Absorb" animation via VFX system
+    addVfxEffect({
+        type: 'rewardPopup',
+        sprite: sprite,
+        material: material,
+        texture: texture,
+        startX: spawnPos.x,
+        startY: spawnPos.y,
+        startZ: spawnPos.z,
+        targetX: targetWorldPos.x,
+        targetY: targetWorldPos.y,
+        targetZ: targetWorldPos.z,
+        // Phase 1: Bounce/pulse (0 - 300ms)
+        // Phase 2: Flow toward balance (300ms - 1000ms)
+        // Phase 3: Dissolve (1000ms - 1300ms)
+        totalDuration: 1300,
+        elapsedMs: 0,
+        
+        update(dt) {
+            this.elapsedMs += dt * 1000;
+            const t = this.elapsedMs / this.totalDuration;
+            
+            if (t >= 1.0) {
+                return false; // Done, trigger cleanup
+            }
+            
+            if (t < 0.23) {
+                // Phase 1: Bounce/pulse at spawn position (0 - 300ms)
+                const phaseT = t / 0.23;
+                // Elastic bounce: scale up then settle
+                const bounce = 1.0 + 0.4 * Math.sin(phaseT * Math.PI) * (1 - phaseT);
+                const baseScale = 12;
+                this.sprite.scale.set(baseScale * bounce, (baseScale / 2) * bounce, 1);
+                this.material.opacity = Math.min(1.0, phaseT * 3); // Quick fade in
+            } else if (t < 0.77) {
+                // Phase 2: Flow toward balance icon (300ms - 1000ms)
+                const phaseT = (t - 0.23) / 0.54;
+                // Smooth ease-in-out curve
+                const eased = phaseT * phaseT * (3 - 2 * phaseT);
+                
+                // Bezier mid-point slightly above for an arc
+                const midX = (this.startX + this.targetX) * 0.5;
+                const midY = (this.startY + this.targetY) * 0.5 + 3; // Slight arc up
+                const midZ = (this.startZ + this.targetZ) * 0.5;
+                
+                const mt = 1 - eased;
+                this.sprite.position.x = mt * mt * this.startX + 2 * mt * eased * midX + eased * eased * this.targetX;
+                this.sprite.position.y = mt * mt * this.startY + 2 * mt * eased * midY + eased * eased * this.targetY;
+                this.sprite.position.z = mt * mt * this.startZ + 2 * mt * eased * midZ + eased * eased * this.targetZ;
+                
+                // Shrink slightly as it approaches target
+                const shrink = 1.0 - eased * 0.3;
+                const baseScale = 12;
+                this.sprite.scale.set(baseScale * shrink, (baseScale / 2) * shrink, 1);
+                this.material.opacity = 1.0;
+            } else {
+                // Phase 3: Dissolve at target (1000ms - 1300ms)
+                const phaseT = (t - 0.77) / 0.23;
+                this.material.opacity = 1.0 - phaseT;
+                // Final shrink + slight expand for "deposit" feel
+                const pulse = 1.0 - 0.3 + 0.15 * Math.sin(phaseT * Math.PI);
+                const baseScale = 12;
+                this.sprite.scale.set(baseScale * pulse * (1 - phaseT * 0.5), (baseScale / 2) * pulse * (1 - phaseT * 0.5), 1);
+            }
+            
+            return true;
+        },
+        
+        cleanup() {
+            if (this.sprite) {
+                particleGroup.remove(this.sprite);
+            }
+            if (this.material) {
+                this.material.dispose();
+            }
+            if (this.texture) {
+                this.texture.dispose();
+            }
+        }
+    });
 }
 
 // Issue 4: Apply RTP labels to weapon buttons (for testing/debugging)

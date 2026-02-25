@@ -15490,7 +15490,7 @@ function _createRewardTextCanvas(amount) {
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
     
-    // Clear
+    // Clear with transparent background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Text styling - bold glowing green to match Balance HUD
@@ -15499,16 +15499,22 @@ function _createRewardTextCanvas(amount) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
+    // Dark outline/stroke for contrast against any background
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.lineWidth = 6;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
+    
     // Outer glow
     ctx.shadowColor = 'rgba(0, 255, 127, 0.8)';
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 16;
     ctx.fillStyle = '#00ff7f';
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
     
-    // Inner bright core
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
-    ctx.fillStyle = '#aaffcc';
+    // Inner bright core (second pass for brightness)
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = '#ccffdd';
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
     
     return canvas;
@@ -15576,18 +15582,17 @@ function showRewardPopup(position, amount) {
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
     
-    // Create 3D Sprite
+    // Create 3D Sprite - use NormalBlending for visibility against bright backgrounds
     const material = new THREE.SpriteMaterial({
         map: texture,
         transparent: true,
         opacity: 1.0,
         depthTest: false,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
+        depthWrite: false
     });
     const sprite = new THREE.Sprite(material);
     sprite.position.copy(spawnPos);
-    sprite.scale.set(12, 6, 1); // Aspect ratio matches 256x128 canvas
+    sprite.scale.set(16, 8, 1); // Aspect ratio matches 256x128 canvas
     sprite.renderOrder = 9999; // Render on top of everything
     particleGroup.add(sprite);
     
@@ -15617,13 +15622,15 @@ function showRewardPopup(position, amount) {
                 return false; // Done, trigger cleanup
             }
             
+            const BASE_W = 16;
+            const BASE_H = 8;
+            
             if (t < 0.23) {
                 // Phase 1: Bounce/pulse at spawn position (0 - 300ms)
                 const phaseT = t / 0.23;
                 // Elastic bounce: scale up then settle
                 const bounce = 1.0 + 0.4 * Math.sin(phaseT * Math.PI) * (1 - phaseT);
-                const baseScale = 12;
-                this.sprite.scale.set(baseScale * bounce, (baseScale / 2) * bounce, 1);
+                this.sprite.scale.set(BASE_W * bounce, BASE_H * bounce, 1);
                 this.material.opacity = Math.min(1.0, phaseT * 3); // Quick fade in
             } else if (t < 0.77) {
                 // Phase 2: Flow toward balance icon (300ms - 1000ms)
@@ -15643,8 +15650,7 @@ function showRewardPopup(position, amount) {
                 
                 // Shrink slightly as it approaches target
                 const shrink = 1.0 - eased * 0.3;
-                const baseScale = 12;
-                this.sprite.scale.set(baseScale * shrink, (baseScale / 2) * shrink, 1);
+                this.sprite.scale.set(BASE_W * shrink, BASE_H * shrink, 1);
                 this.material.opacity = 1.0;
             } else {
                 // Phase 3: Dissolve at target (1000ms - 1300ms)
@@ -15652,8 +15658,8 @@ function showRewardPopup(position, amount) {
                 this.material.opacity = 1.0 - phaseT;
                 // Final shrink + slight expand for "deposit" feel
                 const pulse = 1.0 - 0.3 + 0.15 * Math.sin(phaseT * Math.PI);
-                const baseScale = 12;
-                this.sprite.scale.set(baseScale * pulse * (1 - phaseT * 0.5), (baseScale / 2) * pulse * (1 - phaseT * 0.5), 1);
+                const fade = 1 - phaseT * 0.5;
+                this.sprite.scale.set(BASE_W * pulse * fade, BASE_H * pulse * fade, 1);
             }
             
             return true;

@@ -518,22 +518,8 @@
         #crosshair.weapon-5x .crosshair-ring { border-color: rgba(0, 170, 255, 0.7); }
         #crosshair.weapon-8x .crosshair-ring { border-color: rgba(255, 68, 255, 0.7); }
         
-        /* Reward Animation */
-        .reward-popup {
-            position: absolute;
-            font-size: 24px;
-            font-weight: bold;
-            color: #00ff7f;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 127, 0.5);
-            pointer-events: none;
-            animation: rewardFloat 1.5s ease-out forwards;
-            z-index: 100;
-        }
-        
-        @keyframes rewardFloat {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
-        }
+        /* Reward Animation - Now handled by 3D sprite system in game.js (showRewardPopup) */
+        /* Old 2D .reward-popup CSS removed - reward numbers are 3D sprites near Balance HUD */
         
         /* Video Background for Home/Loading screens */
         /* Video is BEHIND the lobby UI (z-index 999 < lobby's 1000) */

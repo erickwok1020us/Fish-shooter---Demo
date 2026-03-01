@@ -533,7 +533,8 @@ const CONFIG = {
             pattern: 'cruise', schoolSize: [1, 2], form: 'whale',
             category: 'largePredator',
             boidsStrength: 0.1,  // Almost no schooling, mother-calf only
-            maxTurnRate: 0.3    // Very slow turning - majestic cruise
+            maxTurnRate: 0.3,   // Very slow turning - majestic cruise
+            rtpTier: 'boss'     // v1.7 RTP tier mapping
         },
         // 1b. Killer Whale (Orca) - Apex predator, pack hunter
         // ECOLOGY: Pods of 5-30, highly intelligent coordinated hunters
@@ -544,7 +545,8 @@ const CONFIG = {
             pattern: 'burstAttack', schoolSize: [2, 4], form: 'killerWhale',
             category: 'largePredator',
             boidsStrength: 1.8,  // Strong pod coordination
-            maxTurnRate: 0.6    // More agile than blue whale
+            maxTurnRate: 0.6,   // More agile than blue whale
+            rtpTier: 'boss'     // v1.7 RTP tier mapping
         },
         // 2. Great White Shark - Apex predator, torpedo-shaped
         // ECOLOGY: Strictly solitary hunters, burst speeds up to 56 km/h
@@ -555,7 +557,8 @@ const CONFIG = {
             pattern: 'burstAttack', schoolSize: [1, 1], form: 'shark',
             category: 'largePredator',
             boidsStrength: 0,   // Strictly solitary
-            maxTurnRate: 0.8    // Moderate turning - steady predator
+            maxTurnRate: 0.8,   // Moderate turning - steady predator
+            rtpTier: 'boss'     // v1.7 RTP tier mapping
         },
         // 3. Marlin - Fastest fish, long bill for slashing prey
         // ECOLOGY: Solitary hunters, burst speeds up to 130 km/h
@@ -566,7 +569,8 @@ const CONFIG = {
             pattern: 'burstSprint', schoolSize: [1, 2], form: 'marlin',
             category: 'largePredator',
             boidsStrength: 0,   // Strictly solitary
-            maxTurnRate: 0.6    // Slow turning - long body, high speed
+            maxTurnRate: 0.6,   // Slow turning - long body, high speed
+            rtpTier: 'tier1'    // v1.7 RTP tier mapping (Elite)
         },
         // 4. Hammerhead Shark - T-shaped head for enhanced electroreception
         // ECOLOGY: School by day (up to 100+), hunt solo at night
@@ -577,7 +581,8 @@ const CONFIG = {
             pattern: 'sShape', schoolSize: [3, 8], form: 'hammerhead',
             category: 'largePredator',
             boidsStrength: 1.5, // School by day (unique among sharks)
-            maxTurnRate: 0.7    // Moderate turning - schooling shark
+            maxTurnRate: 0.7,   // Moderate turning - schooling shark
+            rtpTier: 'tier1'    // v1.7 RTP tier mapping (Elite)
         },
         
         // ==================== MEDIUM-LARGE PELAGIC FISH (4 species) ====================
@@ -590,7 +595,8 @@ const CONFIG = {
             color: 0x3355aa, secondaryColor: 0xffdd00, count: 6, 
             pattern: 'synchronizedFast', schoolSize: [6, 15], form: 'tuna',
             category: 'mediumLarge',
-            boidsStrength: 2.0  // Tight synchronized schooling
+            boidsStrength: 2.0, // Tight synchronized schooling
+            rtpTier: 'tier2'    // v1.7 RTP tier mapping (Medium)
         },
         // 6. Mahi-Mahi/Dolphinfish - Blunt head, brilliant gold-green
         // ECOLOGY: Small schools of 3-10, surface dwellers, erratic movements
@@ -600,7 +606,8 @@ const CONFIG = {
             color: 0x44aa44, secondaryColor: 0xffcc00, count: 5, 
             pattern: 'irregularTurns', schoolSize: [3, 8], form: 'dolphinfish',
             category: 'mediumLarge',
-            boidsStrength: 1.0  // Loose schooling
+            boidsStrength: 1.0, // Loose schooling
+            rtpTier: 'tier2'    // v1.7 RTP tier mapping (Medium)
         },
         // 7. Barracuda - Long silver ambush predator
         // ECOLOGY: Adults mostly solitary, juveniles in small groups, ambush hunters
@@ -610,7 +617,8 @@ const CONFIG = {
             color: 0xaabbcc, secondaryColor: 0x667788, count: 4, 
             pattern: 'ambush', schoolSize: [1, 3], form: 'barracuda',
             category: 'mediumLarge',
-            boidsStrength: 0.2  // Mostly solitary adults
+            boidsStrength: 0.2, // Mostly solitary adults
+            rtpTier: 'tier1'    // v1.7 RTP tier mapping (Elite) - fast ambush predator
         },
         // 8. Grouper - Wide thick body, bottom dweller
         // ECOLOGY: Strictly solitary and territorial, ambush from reef holes
@@ -620,7 +628,8 @@ const CONFIG = {
             color: 0x886644, secondaryColor: 0x553322, count: 3, 
             pattern: 'bottomBurst', schoolSize: [1, 1], form: 'grouper',
             category: 'mediumLarge',
-            boidsStrength: 0  // Strictly solitary and territorial
+            boidsStrength: 0,   // Strictly solitary and territorial
+            rtpTier: 'tier1'    // v1.7 RTP tier mapping (Elite)
         },
         
         // ==================== MEDIUM COLORFUL REEF FISH (4 species) ====================
@@ -633,7 +642,8 @@ const CONFIG = {
             color: 0x44ddaa, secondaryColor: 0xff66aa, count: 6, 
             pattern: 'stopAndGo', schoolSize: [3, 6], form: 'parrotfish',
             category: 'reefFish',
-            boidsStrength: 1.2  // Loose harem grouping
+            boidsStrength: 1.2, // Loose harem grouping
+            rtpTier: 'tier2'    // v1.7 RTP tier mapping (Medium)
         },
         // 10. Angelfish - Flat disc body, elegant swimmers
         // ECOLOGY: Monogamous pairs or small groups of 3-5, graceful gliding
@@ -643,7 +653,8 @@ const CONFIG = {
             color: 0xffdd44, secondaryColor: 0x4488ff, count: 8, 
             pattern: 'elegantGlide', schoolSize: [2, 4], form: 'angelfish',
             category: 'reefFish',
-            boidsStrength: 0.8  // Paired/small group
+            boidsStrength: 0.8, // Paired/small group
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         // 11. Lionfish - Venomous spines, striking appearance
         // ECOLOGY: Solitary ambush predators, slow deliberate movements
@@ -653,7 +664,8 @@ const CONFIG = {
             color: 0xcc3333, secondaryColor: 0xffffff, count: 8, 
             pattern: 'ambush', schoolSize: [1, 2], form: 'lionfish',
             category: 'reefFish',
-            boidsStrength: 0.2  // Mostly solitary
+            boidsStrength: 0.2, // Mostly solitary
+            rtpTier: 'tier2'    // v1.7 RTP tier mapping (Medium)
         },
         // 12. Blue Tang - Oval flat body, schooling herbivore
         // ECOLOGY: Schools of 5-20 for grazing, coordinated movements
@@ -663,7 +675,8 @@ const CONFIG = {
             color: 0x2288ff, secondaryColor: 0xffff00, count: 12, 
             pattern: 'groupCoordination', schoolSize: [5, 12], form: 'tang',
             category: 'reefFish',
-            boidsStrength: 2.0  // Strong schooling for grazing
+            boidsStrength: 2.0, // Strong schooling for grazing
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         
         // ==================== SMALL SCHOOLING FISH (4 species) ====================
@@ -676,7 +689,8 @@ const CONFIG = {
             color: 0xccddee, secondaryColor: 0x88aacc, count: 15, 
             pattern: 'waveFormation', schoolSize: [20, 40], form: 'sardine',
             category: 'smallSchool',
-            boidsStrength: 3.0  // Extremely tight schooling
+            boidsStrength: 3.0, // Extremely tight schooling
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         // 14. Anchovy - Thin silver semi-transparent, bait balls
         // ECOLOGY: Massive schools, form defensive bait balls when threatened
@@ -686,7 +700,8 @@ const CONFIG = {
             color: 0xaabbcc, secondaryColor: 0x778899, count: 15, 
             pattern: 'baitBall', schoolSize: [25, 45], form: 'anchovy',
             category: 'smallSchool',
-            boidsStrength: 3.5  // Tightest schooling (bait ball)
+            boidsStrength: 3.5, // Tightest schooling (bait ball)
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         // 15. Clownfish - Orange-white stripes, anemone dwellers
         // ECOLOGY: Family groups of 2-4 around single anemone, territorial
@@ -696,7 +711,8 @@ const CONFIG = {
             color: 0xff6600, secondaryColor: 0xffffff, count: 6, 
             pattern: 'territorial', schoolSize: [2, 3], form: 'clownfish',
             category: 'smallSchool',
-            boidsStrength: 1.0  // Family group stays together
+            boidsStrength: 1.0, // Family group stays together
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         // 16. Damselfish - Small oval, aggressive territory defenders
         // ECOLOGY: Territorial, loose groups of 3-8 near reef patches
@@ -706,7 +722,8 @@ const CONFIG = {
             color: 0x6644ff, secondaryColor: 0xffdd00, count: 12, 
             pattern: 'defensiveCharge', schoolSize: [3, 6], form: 'damselfish',
             category: 'smallSchool',
-            boidsStrength: 0.8  // Loose territorial grouping
+            boidsStrength: 0.8, // Loose territorial grouping
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         
         // ==================== SPECIAL FORM FISH (4 species) ====================
@@ -719,7 +736,8 @@ const CONFIG = {
             color: 0x222233, secondaryColor: 0xeeeeee, count: 2, 
             pattern: 'wingGlide', schoolSize: [1, 2], form: 'mantaRay',
             category: 'specialForm',
-            boidsStrength: 0.3  // Mostly solitary, occasional pairs
+            boidsStrength: 0.3, // Mostly solitary, occasional pairs
+            rtpTier: 'tier1'    // v1.7 RTP tier mapping (Elite)
         },
         // 18. Pufferfish - Round inflatable body, slow swimmers
         // ECOLOGY: Strictly solitary, slow deliberate movements
@@ -729,7 +747,8 @@ const CONFIG = {
             color: 0xddcc88, secondaryColor: 0x886644, count: 4, 
             pattern: 'slowRotation', schoolSize: [1, 1], form: 'pufferfish',
             category: 'specialForm',
-            boidsStrength: 0  // Strictly solitary
+            boidsStrength: 0,   // Strictly solitary
+            rtpTier: 'tier2'    // v1.7 RTP tier mapping (Medium)
         },
         // 19. Seahorse - Vertical posture, curled tail
         // ECOLOGY: Monogamous pairs, vertical drifting, very slow
@@ -739,7 +758,8 @@ const CONFIG = {
             color: 0xffaa44, secondaryColor: 0xcc8833, count: 4, 
             pattern: 'verticalDrift', schoolSize: [1, 2], form: 'seahorse',
             category: 'specialForm',
-            boidsStrength: 1.2  // Monogamous pair bonding
+            boidsStrength: 1.2, // Monogamous pair bonding
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         // 20. Flying Fish - Large pectoral fins for gliding
         // ECOLOGY: Schools of 10-50, surface swimmers, glide to escape predators
@@ -749,7 +769,8 @@ const CONFIG = {
             color: 0x4488cc, secondaryColor: 0x88ccff, count: 10, 
             pattern: 'glideJump', schoolSize: [8, 15], form: 'flyingFish',
             category: 'specialForm',
-            boidsStrength: 2.0  // Strong schooling for predator evasion
+            boidsStrength: 2.0, // Strong schooling for predator evasion
+            rtpTier: 'tier3'    // v1.7 RTP tier mapping (Weakest)
         },
         
         // ==================== SPECIAL ABILITY FISH (Phase 2 - Reserved for future GLB models) ====================
@@ -797,11 +818,12 @@ const CONFIG = {
         }
     },
     
-    // RTP settings - Updated weapon configuration
-    // 1x: 91%, 3x: 93%, 5x: 94%, 8x: 95%
+    // RTP settings - v1.7 Reward-Driven Model
+    // Manual mode: 1x=92%, 3x=94%, 5x=96%, 8x=98%
+    // Auto mode:   1x=90%, 3x=92%, 5x=94%, 8x=96%
     rtp: {
-        entertainment: { '1x': 0.91, '3x': 0.93, '5x': 0.94, '8x': 0.95 },
-        real: { '1x': 0.91, '3x': 0.93, '5x': 0.94, '8x': 0.95 }
+        manual: { '1x': 0.92, '3x': 0.94, '5x': 0.96, '8x': 0.98 },
+        auto:   { '1x': 0.90, '3x': 0.92, '5x': 0.94, '8x': 0.96 }
     },
     
     // Game settings - Issue #10: Adjusted fish count for 1.5x tank
@@ -873,7 +895,9 @@ const gameState = {
     comboCount: 0,           // Current consecutive kills
     comboTimer: 0,           // Time remaining to continue combo
     comboTimeWindow: 3.0,    // Seconds to get next kill to continue combo
-    lastComboBonus: 0        // Last applied combo bonus percentage
+    lastComboBonus: 0,        // Last applied combo bonus percentage
+    // v1.7 Bet Multiplier System
+    betMultiplier: 1           // Current bet multiplier (1, 3, 5, 10)
 };
 
 // ==================== GLB FISH MODEL LOADER (PDF Spec Compliant) ====================
@@ -10605,11 +10629,17 @@ function autoFireAtFish(targetFish) {
     // Check cooldown
     if (gameState.cooldown > 0) return false;
     
-    // Check balance
-    if (gameState.balance < weapon.cost) return false;
+    // v1.7: Use bet multiplier for effective cost
+    const effectiveCost = weapon.cost * gameState.betMultiplier;
     
-    // Deduct cost
-    gameState.balance -= weapon.cost;
+    // Check balance against effective cost
+    if (gameState.balance < effectiveCost) return false;
+    
+    // Deduct effective cost
+    gameState.balance -= effectiveCost;
+    
+    // Record bet for RTP tracking
+    recordBet(weaponKey);
     
     // Set cooldown
     gameState.cooldown = 1 / weapon.shotsPerSecond;
@@ -13575,61 +13605,52 @@ class Fish {
             const coinCount = fishSize === 'boss' ? 10 : fishSize === 'large' ? 6 : fishSize === 'medium' ? 3 : 1;
             spawnCoinFlyToScore(deathPosition, coinCount, this.config.reward);
         } else {
-            // SINGLE PLAYER MODE: Use local RTP calculation
-            // COMBO SYSTEM: Update combo and get bonus
+            // SINGLE PLAYER MODE: v1.7 RTP Hybrid Defense Model
+            // Uses determineKill() with Hard Pity + Soft Gate + Controlled Debt + pityComp + late-ramp
             const comboBonus = updateComboOnKill();
             
-            // FIXED RTP SYSTEM: Casino-standard kill rate calculation
-            // Kill Rate = Target RTP / Effective Multiplier (reward / cost-to-kill)
-            // This ensures long-term RTP converges to target (91-95% based on fish size)
-            const fishReward = this.config.reward;
-            const fishHP = this.config.hp;
+            // Get fish RTP tier from config (v1.7 tier mapping: boss/tier1/tier2/tier3)
+            const rtpTier = this.config.rtpTier || 'tier3';
             
-            // Calculate kill rate using FIXED RTP system (now accounts for cost-to-kill)
-            const killRate = calculateKillRate(fishReward, weaponKey, fishHP);
+            // Use fish instance ID for per-fish state tracking
+            const fishInstanceId = 'fish_' + this.fishIndex + '_' + weaponKey;
             
-            // Determine if this kill awards a payout based on kill rate
-            const isKill = Math.random() < killRate;
+            // v1.7 Hybrid Defense: determine kill using probability system
+            const killResult = determineKill(fishInstanceId, rtpTier, weaponKey);
+            
             // Apply combo bonus to winnings
-            // NOTE: fishReward is already in coins (40-500), no need to multiply by weapon.multiplier
-            const baseWin = isKill ? fishReward : 0;
+            const baseWin = killResult.isKill ? killResult.reward : 0;
             const win = baseWin > 0 ? Math.floor(baseWin * (1 + comboBonus)) : 0;
             
-            // Determine fish size from tier (used for visual effects)
+            // Determine fish size from rtpTier (used for visual effects)
             let fishSize = 'small';
-            if (this.tier === 'tier4' || this.isBoss) {
+            if (rtpTier === 'boss') {
                 fishSize = 'boss';
-            } else if (this.tier === 'tier3') {
+            } else if (rtpTier === 'tier1') {
                 fishSize = 'large';
-            } else if (this.tier === 'tier2') {
+            } else if (rtpTier === 'tier2') {
                 fishSize = 'medium';
             }
             
             // ALWAYS spawn visual effects on fish death (regardless of RTP payout)
-            // This provides consistent feedback to players - every kill feels rewarding
             spawnFishDeathEffect(deathPosition, fishSize, this.config.color);
             
             // Play coin sound on fish kill (not on collection)
             playCoinSound(fishSize);
             
             // ALWAYS spawn coin visual effect based on fish size - no sound on collection
-            // CASINO EFFECT: Balance updates when coins reach cannon, not on fish death
             const coinCount = fishSize === 'boss' ? 10 : fishSize === 'large' ? 6 : fishSize === 'medium' ? 3 : 1;
-            spawnCoinFlyToScore(deathPosition, coinCount, win > 0 ? win : fishReward);
+            spawnCoinFlyToScore(deathPosition, coinCount, win > 0 ? win : (killResult.reward || this.config.reward));
             
             // Record the win for RTP tracking (bet was already recorded when shot was fired)
-            // NOTE: Balance is now updated when coins reach cannon (in triggerCoinCollection)
-            // This creates a more satisfying casino-like experience
             if (win > 0) {
                 recordWin(win);
-                // Balance update moved to coin collection - happens when coins reach cannon
-                // gameState.balance += win; // REMOVED - now in onCoinCollected()
-                // gameState.score += Math.floor(win); // REMOVED - now in onCoinCollected()
-                
                 // Show reward popup only when actual payout occurs
                 showRewardPopup(deathPosition, win);
             }
-            // Note: No "miss" sound or gray particles - every kill now has coin feedback
+            
+            // Clear per-fish RTP state on death
+            clearRtpState(fishInstanceId);
         }
         
         // MEMORY LEAK FIX: Store respawn timer ID so it can be cancelled if fish is reused
@@ -13958,19 +13979,83 @@ function updateDynamicFishSpawn(deltaTime) {
 //
 // This ensures RTP is calculated based on actual cost, not just reward amount.
 
-const RTP_CONFIG = {
-    // Target RTP by effective multiplier (reward / cost-to-kill)
-    // Higher multiplier = slightly higher RTP to encourage targeting big fish
-    targetRTP: {
-        small: 0.91,    // Small fish (multiplier < 50): 91% RTP
-        medium: 0.93,   // Medium fish (multiplier 50-150): 93% RTP  
-        large: 0.94,    // Large fish (multiplier 150-300): 94% RTP
-        boss: 0.95      // Boss fish (multiplier > 300): 95% RTP
+// ==================== RTP SYSTEM v1.7 - Hybrid Defense Model ====================
+// FROZEN constants per specification v1.7 (Single Source of Truth)
+// All financial calculations use fixed-point integer arithmetic to prevent
+// floating-point drift. NO floats for money comparisons.
+
+const RTP_FIXED_POINT = {
+    MONEY_SCALE: 1000,        // 1 coin = 1000 units internally
+    RTP_SCALE: 10000,         // 92% = 9200
+    PROGRESS_SCALE: 1000000,  // progress ratio with 6 decimal places
+    WEIGHT_SCALE: 1000000     // weight distribution for multi-target
+};
+
+// FROZEN: pityComp compensation coefficients per tier
+const PITY_COMP = {
+    boss:  0.316,
+    tier1: 0.320,
+    tier2: 0.332,
+    tier3: 0.367
+};
+
+// FROZEN: RAMP_START threshold for late-ramp acceleration
+const RAMP_START = 0.8;
+
+// v1.7 RTP Master Matrix - Reward-Driven Model
+// RTP depends on weapon type: Manual 1x=92%, 3x=94%, 5x=96%, 8x=98%
+// Auto mode: 1x=90%, 3x=92%, 5x=94%, 8x=96%
+// reward = tier reward (Boss=39.2, T1=15.33, T2=9.2, T3=7.84)
+// N = Hard Pity guaranteed kill shots, P1 = base kill probability per shot
+const RTP_MASTER_MATRIX = {
+    boss: {
+        reward_manual: 39.2,
+        reward_auto: 38.42,
+        weapons: {
+            '1x': { cost: 1, rtp_manual: 0.92, rtp_auto: 0.90, N: 42, P1: 0.0235 },
+            '3x': { cost: 3, rtp_manual: 0.94, rtp_auto: 0.92, N: 13, P1: 0.0719 },
+            '5x': { cost: 5, rtp_manual: 0.96, rtp_auto: 0.94, N: 8,  P1: 0.1224 },
+            '8x': { cost: 8, rtp_manual: 0.98, rtp_auto: 0.96, N: 5,  P1: 0.2000 }
+        }
     },
-    // Dynamic RTP adjustment bounds (90-96% market standard)
-    minRTP: 0.88,     // Minimum RTP (88%) - increase kill rate if below
-    maxRTP: 0.97,     // Maximum RTP (97%) - decrease kill rate if above
-    // Tracking
+    tier1: {
+        reward_manual: 15.33,
+        reward_auto: 15.02,
+        weapons: {
+            '1x': { cost: 1, rtp_manual: 0.92, rtp_auto: 0.90, N: 16, P1: 0.0600 },
+            '3x': { cost: 3, rtp_manual: 0.94, rtp_auto: 0.92, N: 6,  P1: 0.1840 },
+            '5x': { cost: 5, rtp_manual: 0.96, rtp_auto: 0.94, N: 4,  P1: 0.3131 },
+            '8x': { cost: 8, rtp_manual: 0.98, rtp_auto: 0.96, N: 2,  P1: 0.5114 }
+        }
+    },
+    tier2: {
+        reward_manual: 9.2,
+        reward_auto: 9.02,
+        weapons: {
+            '1x': { cost: 1, rtp_manual: 0.92, rtp_auto: 0.90, N: 10, P1: 0.1000 },
+            '3x': { cost: 3, rtp_manual: 0.94, rtp_auto: 0.92, N: 4,  P1: 0.3065 },
+            '5x': { cost: 5, rtp_manual: 0.96, rtp_auto: 0.94, N: 2,  P1: 0.5217 },
+            '8x': { cost: 8, rtp_manual: 0.98, rtp_auto: 0.96, N: 2,  P1: 0.8522 }
+        }
+    },
+    tier3: {
+        reward_manual: 7.84,
+        reward_auto: 7.68,
+        weapons: {
+            '1x': { cost: 1, rtp_manual: 0.92, rtp_auto: 0.90, N: 8,  P1: 0.1173 },
+            '3x': { cost: 3, rtp_manual: 0.94, rtp_auto: 0.92, N: 3,  P1: 0.3597 },
+            '5x': { cost: 5, rtp_manual: 0.96, rtp_auto: 0.94, N: 2,  P1: 0.6122 },
+            '8x': { cost: 8, rtp_manual: 0.98, rtp_auto: 0.96, N: 1,  P1: 1.0000 }
+        }
+    }
+};
+
+// Per-fish RTP state tracking: Map<string, {sum_cost_fp, budget_remaining_fp, shot_count}>
+// Key format: "fishInstanceId_weaponKey" for per-fish-per-weapon tracking
+const rtpFishState = new Map();
+
+// Session-level RTP tracking for statistics display
+const RTP_CONFIG = {
     sessionStats: {
         totalBets: 0,
         totalWins: 0,
@@ -13979,57 +14064,135 @@ const RTP_CONFIG = {
     }
 };
 
-// Get RTP target based on effective multiplier (reward / cost-to-kill)
-function getTargetRTP(effectiveMultiplier) {
-    if (effectiveMultiplier > 300) {
-        return RTP_CONFIG.targetRTP.boss;      // 95% for boss fish
-    } else if (effectiveMultiplier > 150) {
-        return RTP_CONFIG.targetRTP.large;     // 94% for large fish
-    } else if (effectiveMultiplier >= 50) {
-        return RTP_CONFIG.targetRTP.medium;    // 93% for medium fish
-    } else {
-        return RTP_CONFIG.targetRTP.small;     // 91% for small fish
-    }
+// ---- Fixed-point helper functions (v1.7 spec compliant) ----
+
+// Convert coin amount to fixed-point
+function toFixedPoint(coins) {
+    return Math.round(coins * RTP_FIXED_POINT.MONEY_SCALE);
 }
 
-// Calculate kill rate based on fish reward and weapon used
-// FIXED: Now properly accounts for cost-to-kill the fish
-function calculateKillRate(fishReward, weaponKey, fishHP) {
-    const weapon = CONFIG.weapons[weaponKey];
-    
-    // Calculate expected shots to kill this fish
-    // Use average damage for weapons with variable damage
-    const avgDamage = weapon.damage;
-    const shotsToKill = Math.max(1, Math.ceil((fishHP || 100) / avgDamage));
-    
-    // Calculate cost to kill
-    const costToKill = shotsToKill * weapon.cost;
-    
-    // Calculate effective multiplier (reward / cost)
-    const effectiveMultiplier = fishReward / costToKill;
-    
-    // Get target RTP based on effective multiplier
-    const targetRTP = getTargetRTP(effectiveMultiplier);
-    
-    // Kill rate formula: killRate = targetRTP / effectiveMultiplier
-    // This ensures: Expected Value = killRate * reward = targetRTP * costToKill
-    let killRate = targetRTP / effectiveMultiplier;
-    
-    // Dynamic adjustment based on current session RTP
-    const currentRTP = getCurrentSessionRTP();
-    if (currentRTP > 0) {
-        if (currentRTP > RTP_CONFIG.maxRTP) {
-            // Player winning too much - reduce kill rate by 10%
-            killRate *= 0.9;
-        } else if (currentRTP < RTP_CONFIG.minRTP) {
-            // Player losing too much - increase kill rate by 10%
-            killRate *= 1.1;
-        }
+// Convert fixed-point back to coins (floor division)
+function fromFixedPoint(fp) {
+    return Math.floor(fp / RTP_FIXED_POINT.MONEY_SCALE);
+}
+
+// Get or create per-fish RTP state
+function getRtpState(fishInstanceId) {
+    if (!rtpFishState.has(fishInstanceId)) {
+        rtpFishState.set(fishInstanceId, {
+            sum_cost_fp: 0,
+            budget_remaining_fp: 0,
+            shot_count: 0
+        });
     }
-    
-    // Clamp kill rate to reasonable bounds (1% to 95%)
-    // Minimum 1% ensures players always have a chance to win
-    return Math.max(0.01, Math.min(0.95, killRate));
+    return rtpFishState.get(fishInstanceId);
+}
+
+// Clear per-fish RTP state (on death/despawn)
+function clearRtpState(fishInstanceId) {
+    rtpFishState.delete(fishInstanceId);
+}
+
+// Get matrix entry for a given tier and weapon
+function getMatrixEntry(rtpTier, weaponKey) {
+    const tierData = RTP_MASTER_MATRIX[rtpTier];
+    if (!tierData) return null;
+    const weaponData = tierData.weapons[weaponKey];
+    if (!weaponData) return null;
+    return {
+        cost: weaponData.cost,
+        reward_manual: tierData.reward_manual,
+        reward_auto: tierData.reward_auto,
+        rtp_manual: weaponData.rtp_manual,
+        rtp_auto: weaponData.rtp_auto,
+        N: weaponData.N,
+        P1: weaponData.P1
+    };
+}
+
+// ---- v1.7 Hybrid Defense Kill Determination ----
+// Implements: Hard Pity + Soft Gate + Controlled Debt + pityComp + late-ramp
+// Returns: { isKill: boolean, reward: number (in coins) }
+function determineKill(fishInstanceId, rtpTier, weaponKey) {
+    const isAuto = gameState.autoShoot;
+    const entry = getMatrixEntry(rtpTier, weaponKey);
+    if (!entry) {
+        // Fallback: 5% flat kill rate if matrix entry missing
+        return { isKill: Math.random() < 0.05, reward: 0 };
+    }
+
+    const betMultiplier = gameState.betMultiplier;
+    const cost = entry.cost * betMultiplier;
+    const reward = isAuto ? entry.reward_auto : entry.reward_manual;
+    const actualReward = reward * betMultiplier;
+    const rtp = isAuto ? entry.rtp_auto : entry.rtp_manual;
+    const N = entry.N;
+    const P1 = entry.P1;
+
+    // Fixed-point conversions
+    const cost_fp = toFixedPoint(cost);
+    const reward_fp = toFixedPoint(actualReward);
+    const debt_floor_fp = -reward_fp; // Controlled Debt floor = -reward
+
+    // Get or create per-fish state
+    const state = getRtpState(fishInstanceId);
+
+    // Accumulate budget: budget += cost × RTP
+    const budget_add_fp = Math.round(cost_fp * rtp);
+    state.sum_cost_fp += cost_fp;
+    state.budget_remaining_fp += budget_add_fp;
+    state.shot_count++;
+
+    // ---- Hard Pity: guaranteed kill at N shots ----
+    if (state.shot_count >= N) {
+        const earnedReward = actualReward;
+        // Debit budget
+        state.budget_remaining_fp -= reward_fp;
+        // Enforce debt floor
+        if (state.budget_remaining_fp < debt_floor_fp) {
+            state.budget_remaining_fp = debt_floor_fp;
+        }
+        return { isKill: true, reward: earnedReward };
+    }
+
+    // ---- Soft Gate: always allow roll, use max(0, budget) for P_base ----
+    const effective_budget_fp = Math.max(0, state.budget_remaining_fp);
+
+    // P_base = effective_budget / reward (clamped to [0, 1])
+    let P_base = reward_fp > 0 ? effective_budget_fp / reward_fp : 0;
+    P_base = Math.min(1.0, Math.max(0, P_base));
+
+    // ---- pityComp: compensation coefficient ----
+    const pityComp = PITY_COMP[rtpTier] || 0.35;
+
+    // ---- late-ramp: acceleration when progress > RAMP_START ----
+    const progress = state.shot_count / N; // 0..1
+    let rampFactor = 1.0;
+    if (progress >= RAMP_START) {
+        // Quadratic ramp: accelerate kill probability as we approach N
+        const t = (progress - RAMP_START) / (1.0 - RAMP_START);
+        rampFactor = 1.0 + 2.0 * t * t;
+    }
+
+    // Final kill probability: P = P1 + pityComp × P_base × rampFactor
+    // Clamped to [P1, 1.0]
+    let P_kill = P1 + pityComp * P_base * rampFactor;
+    P_kill = Math.min(1.0, Math.max(P1, P_kill));
+
+    // Roll
+    const roll = Math.random();
+    if (roll < P_kill) {
+        // Kill! Debit budget
+        state.budget_remaining_fp -= reward_fp;
+        // Enforce debt floor (Controlled Debt)
+        if (state.budget_remaining_fp < debt_floor_fp) {
+            state.budget_remaining_fp = debt_floor_fp;
+        }
+        return { isKill: true, reward: actualReward };
+    }
+
+    // Miss - budget state already updated (sum_cost accumulated)
+    return { isKill: false, reward: 0 };
 }
 
 // Get current session RTP
@@ -14038,10 +14201,10 @@ function getCurrentSessionRTP() {
     return RTP_CONFIG.sessionStats.totalWins / RTP_CONFIG.sessionStats.totalBets;
 }
 
-// Record a bet (shot fired)
+// Record a bet (shot fired) - v1.7: accounts for bet multiplier
 function recordBet(weaponKey) {
     const weapon = CONFIG.weapons[weaponKey];
-    const betAmount = weapon.cost;
+    const betAmount = weapon.cost * gameState.betMultiplier;
     RTP_CONFIG.sessionStats.totalBets += betAmount;
     RTP_CONFIG.sessionStats.shotsFired++;
 }
@@ -14061,8 +14224,50 @@ function getRTPStats() {
         currentRTP: (getCurrentSessionRTP() * 100).toFixed(1) + '%',
         shotsFired: stats.shotsFired,
         fishKilled: stats.fishKilled,
-        hitRate: stats.shotsFired > 0 ? ((stats.fishKilled / stats.shotsFired) * 100).toFixed(1) + '%' : '0%'
+        hitRate: stats.shotsFired > 0 ? ((stats.fishKilled / stats.shotsFired) * 100).toFixed(1) + '%' : '0%',
+        betMultiplier: gameState.betMultiplier + 'x',
+        activeFishStates: rtpFishState.size
     };
+}
+
+// Calculate effective cost for current weapon + bet multiplier
+function getEffectiveCost(weaponKey) {
+    const weapon = CONFIG.weapons[weaponKey];
+    return weapon.cost * gameState.betMultiplier;
+}
+
+// Set bet multiplier (valid values: 1, 3, 5, 10)
+function setBetMultiplier(m) {
+    const validMultipliers = [1, 3, 5, 10];
+    if (validMultipliers.includes(m)) {
+        gameState.betMultiplier = m;
+        updateBetMultiplierUI();
+        updateWeaponCostDisplay();
+    }
+}
+
+// Update bet multiplier UI display
+function updateBetMultiplierUI() {
+    const btns = document.querySelectorAll('.bet-multiplier-btn');
+    btns.forEach(btn => {
+        const m = parseInt(btn.dataset.bet);
+        btn.classList.toggle('active', m === gameState.betMultiplier);
+    });
+}
+
+// Update weapon cost display to reflect current bet multiplier
+function updateWeaponCostDisplay() {
+    const M = gameState.betMultiplier;
+    document.querySelectorAll('.weapon-btn').forEach(btn => {
+        const weaponKey = btn.dataset.weapon;
+        const weapon = CONFIG.weapons[weaponKey];
+        if (weapon) {
+            const costEl = btn.querySelector('.cost');
+            if (costEl) {
+                costEl.textContent = (weapon.cost * M) + ' USDT';
+            }
+        }
+    });
 }
 
 // ==================== BULLET SYSTEM ====================
@@ -14523,12 +14728,15 @@ function fireBullet(targetX, targetY) {
         return true;
     }
     
-    // SINGLE PLAYER MODE: Original logic
-    // Check balance
-    if (gameState.balance < weapon.cost) return false;
+    // SINGLE PLAYER MODE: v1.7 Bet Multiplier cost system
+    // Actual cost = weapon base cost × bet multiplier (M)
+    const effectiveCost = weapon.cost * gameState.betMultiplier;
     
-    // Deduct cost
-    gameState.balance -= weapon.cost;
+    // Check balance against effective cost
+    if (gameState.balance < effectiveCost) return false;
+    
+    // Deduct effective cost
+    gameState.balance -= effectiveCost;
     
     // Record bet for RTP tracking
     recordBet(weaponKey);
@@ -15857,7 +16065,24 @@ function setupEventListeners() {
             return;
         }
         
-        // Weapon switching: 1-5 keys
+        // v1.7 Bet Multiplier: Shift+1/2/3/4 to change bet
+        if (e.shiftKey) {
+            if (e.key === '!') { // Shift+1
+                setBetMultiplier(1);
+                return;
+            } else if (e.key === '@') { // Shift+2
+                setBetMultiplier(3);
+                return;
+            } else if (e.key === '#') { // Shift+3
+                setBetMultiplier(5);
+                return;
+            } else if (e.key === '$') { // Shift+4
+                setBetMultiplier(10);
+                return;
+            }
+        }
+        
+        // Weapon switching: 1-4 keys
         if (e.key === '1') {
             selectWeapon('1x');
             highlightButton('.weapon-btn[data-weapon="1x"]');

@@ -220,6 +220,55 @@
             color: var(--weapon-color);
         }
         
+        /* v1.7 Bet Multiplier Panel */
+        #bet-multiplier-panel {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            display: flex;
+            gap: 6px;
+            pointer-events: auto;
+            align-items: center;
+        }
+        
+        #bet-multiplier-panel .bet-label {
+            color: #aabbcc;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-right: 4px;
+        }
+        
+        .bet-multiplier-btn {
+            width: 48px;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            background: linear-gradient(180deg, rgba(40, 40, 50, 0.95), rgba(20, 20, 30, 0.95));
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: #888;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        
+        .bet-multiplier-btn:hover {
+            transform: scale(1.1);
+            border-color: #666;
+            color: #ccc;
+        }
+        
+        .bet-multiplier-btn.active {
+            border-color: #ffcc00;
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
+            color: #ffcc00;
+            background: linear-gradient(180deg, rgba(60, 50, 20, 0.95), rgba(40, 30, 10, 0.95));
+        }
+        
         /* Auto-shoot Toggle, Center View, and View Mode - Bottom Right */
         #auto-shoot-container {
             position: absolute;
@@ -1514,6 +1563,15 @@
                 <button id="auto-shoot-btn">AUTO OFF (A)</button>
                 <button id="view-mode-btn">3RD PERSON (Space)</button>
                 <button id="center-view-btn">CENTER VIEW (C)</button>
+            </div>
+            
+            <!-- v1.7 Bet Multiplier Panel -->
+            <div id="bet-multiplier-panel">
+                <span class="bet-label">BET</span>
+                <button class="bet-multiplier-btn active" data-bet="1" onclick="setBetMultiplier(1)">1x</button>
+                <button class="bet-multiplier-btn" data-bet="3" onclick="setBetMultiplier(3)">3x</button>
+                <button class="bet-multiplier-btn" data-bet="5" onclick="setBetMultiplier(5)">5x</button>
+                <button class="bet-multiplier-btn" data-bet="10" onclick="setBetMultiplier(10)">10x</button>
             </div>
             
             <!-- Weapon Panel - Updated: 4 weapons only (1x, 3x, 5x, 8x) -->

@@ -1973,7 +1973,7 @@ const WEAPON_GLB_CONFIG = {
             cannonNonPlayer: '1x 武器模組(非玩家).glb',  // Low-poly version for other players (~3k triangles)
             bullet: '1x 子彈模組',
             hitEffect: '1x 擊中特效',
-            scale: 0.8,
+            scale: 1.7,
             bulletScale: 0.5,
             hitEffectScale: 1.0,
             muzzleOffset: new THREE.Vector3(0, 25, 60),
